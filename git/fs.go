@@ -15,18 +15,10 @@ func ListFilesRecursively(t *Tree, dir string) ([]string, error) {
 			if err != nil {
 				return nil, err
 			}
-			list = append(list, prefixPaths(dir, sublist)...)
+			list = append(list, sublist...)
 		} else {
 			list = append(list, filepath.Join(dir, info.Name()))
 		}
 	}
 	return list, nil
-}
-
-func prefixPaths(prefix string, paths []string) []string {
-	r := make([]string, len(paths))
-	for i, p := range paths {
-		r[i] = filepath.Join(prefix, p)
-	}
-	return r
 }
