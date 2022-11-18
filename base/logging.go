@@ -9,9 +9,14 @@ import (
 )
 
 var logger *zap.Logger
+var verbose bool
 
 func init() {
 	LogQuietly()
+}
+
+func IsVerbose() bool {
+	return verbose
 }
 
 func newQuietConfig() zap.Config {
@@ -27,6 +32,7 @@ func LogQuietly() {
 		os.Exit(1)
 	}
 	logger = l
+	verbose = false
 }
 
 func LogVerbosely() {
@@ -36,6 +42,7 @@ func LogVerbosely() {
 		os.Exit(1)
 	}
 	logger = l
+	verbose = true
 }
 
 func AssertNoErr(err error) {
