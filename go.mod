@@ -8,6 +8,8 @@ require (
 	go.uber.org/zap v1.23.0
 )
 
+replace github.com/go-git/go-git => /Users/petar/github.com/go-git/go-git
+
 require (
 	github.com/Microsoft/go-winio v0.4.16 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20210428141323-04723f9f07d7 // indirect

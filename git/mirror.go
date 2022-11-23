@@ -20,7 +20,8 @@ func Mirror(
 	repo *Repository,
 	srcNames []string,
 	srcAddrs []Address,
-	rootNS ns.NS,
+	toBranch Branch,
+	toNS ns.NS,
 ) {
 
 	// fetch remotes
@@ -45,12 +46,13 @@ func Mirror(
 	mirrorsTreeHash, err := repo.Storer.SetEncodedObject(treeObject)
 	must.NoError(ctx, err)
 
-	// merge mirrors into the HEAD tree
-	head, err := repo.Head()
+	// merge mirrors into the toBranch tree
+	branchRefName := plumbing.NewBranchReferenceName(string(toBranch))
+	branchRef, err := repo.Reference(branchRefName, true)
 	must.NoError(ctx, err)
-	headCommitObject, err := object.GetCommit(repo.Storer, head.Hash())
+	branchCommitObject, err := object.GetCommit(repo.Storer, branchRef.Hash())
 	must.NoError(ctx, err)
-	mergedTreeHash := attachTreeAtPath(ctx, repo, headCommitObject.TreeHash, rootNS.Parts(), mirrorsTreeHash)
+	mergedTreeHash := attachTreeAtPath(ctx, repo, branchCommitObject.TreeHash, toNS.Parts(), mirrorsTreeHash)
 
 	// create a commit
 	commit := object.Commit{
@@ -58,7 +60,7 @@ func Mirror(
 		// Committer:    object.Signature{Name: "Petar", Email: "petar@example.com", When: time.Now()},
 		Message:      "merge mirrors into HEAD",
 		TreeHash:     mergedTreeHash,
-		ParentHashes: remoteCommitHashes,
+		ParentHashes: append([]plumbing.Hash{branchCommitObject.Hash}, remoteCommitHashes...),
 	}
 	commitObject := repo.Storer.NewEncodedObject()
 	err = commit.Encode(commitObject)
@@ -66,21 +68,8 @@ func Mirror(
 	commitHash, err := repo.Storer.SetEncodedObject(commitObject)
 	must.NoError(ctx, err)
 
-	// update HEAD
-	updateHEAD(ctx, repo, commitHash)
-}
-
-func updateHEAD(ctx context.Context, repo *Repository, commitHash plumbing.Hash) {
-	head, err := repo.Storer.Reference(plumbing.HEAD)
-	must.NoError(ctx, err)
-
-	name := plumbing.HEAD
-	if head.Type() != plumbing.HashReference {
-		name = head.Target()
-	}
-
-	ref := plumbing.NewHashReference(name, commitHash)
-	err = repo.Storer.SetReference(ref)
+	// update branch
+	err = repo.Storer.SetReference(plumbing.NewHashReference(branchRefName, commitHash))
 	must.NoError(ctx, err)
 }
 
@@ -122,6 +111,7 @@ func mergeTrees(
 	repo *Repository,
 	leftTH plumbing.Hash, // TH = TreeHash
 	rightTH plumbing.Hash,
+	rightOverrides bool,
 ) plumbing.Hash {
 
 	// get trees
@@ -137,9 +127,15 @@ func mergeTrees(
 	}
 	for _, right := range rightTree.Entries {
 		if left, ok := merged[right.Name]; ok {
-			must.Assertf(ctx, left.Mode == filemode.Dir && right.Mode == filemode.Dir, "not a mutually exclusive merge")
-			mergedLeftRightTH := mergeTrees(ctx, repo, left.Hash, right.Hash)
-			merged[right.Name] = object.TreeEntry{Name: right.Name, Mode: filemode.Dir, Hash: mergedLeftRightTH}
+			if left.Mode == filemode.Dir && right.Mode == filemode.Dir {
+				// merge directories
+				mergedLeftRightTH := mergeTrees(ctx, repo, left.Hash, right.Hash, rightOverrides)
+				merged[right.Name] = object.TreeEntry{Name: right.Name, Mode: filemode.Dir, Hash: mergedLeftRightTH}
+			} else {
+				// right overrides left
+				must.Assertf(ctx, rightOverrides, "not a mutually exclusive merge")
+				merged[right.Name] = right
+			}
 		} else {
 			merged[right.Name] = right
 		}
@@ -196,5 +192,5 @@ func attachTreeAtPath(
 	attachTH plumbing.Hash,
 ) (newRootTH plumbing.Hash) {
 
-	return mergeTrees(ctx, repo, rootTH, prefixTree(ctx, repo, atPath, attachTH))
+	return mergeTrees(ctx, repo, rootTH, prefixTree(ctx, repo, atPath, attachTH), true)
 }
