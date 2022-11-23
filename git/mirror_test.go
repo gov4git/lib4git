@@ -37,7 +37,10 @@ func TestMirror(t *testing.T) {
 		},
 		ns.NS("x/y/z"),
 	)
-	<-(chan int)(nil)
+
+	// TODO: add verification
+
+	// <-(chan int)(nil)
 }
 
 func populate(ctx context.Context, r *git.Repository, nonce string) {
@@ -45,6 +48,8 @@ func populate(ctx context.Context, r *git.Repository, nonce string) {
 	f, _ := w.Filesystem.Create(nonce)
 	f.Write([]byte(nonce))
 	f.Close()
-	_, err := w.Commit(nonce, &git.CommitOptions{All: true})
+	_, err := w.Add(nonce)
+	must.NoError(ctx, err)
+	_, err = w.Commit(nonce, &git.CommitOptions{All: true})
 	must.NoError(ctx, err)
 }
