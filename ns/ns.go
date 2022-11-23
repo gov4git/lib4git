@@ -17,3 +17,7 @@ func (ns NS) Sub(path string) NS {
 func (ns NS) Join(sub NS) NS {
 	return ns.Sub(string(sub))
 }
+
+func (ns NS) Parts() []string {
+	return filepath.SplitList(ns.Path())
+}

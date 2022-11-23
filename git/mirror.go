@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
-	"time"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
@@ -16,13 +15,22 @@ import (
 	"github.com/gov4git/lib4git/ns"
 )
 
-func Mirror(ctx context.Context, repo *Repository, srcNames []string, srcAddrs []Address, rootNS ns.NS) {
+func Mirror(
+	ctx context.Context,
+	repo *Repository,
+	srcNames []string,
+	srcAddrs []Address,
+	rootNS ns.NS,
+) {
 
 	// fetch remotes
 	must.Assertf(ctx, len(srcNames) == len(srcAddrs), "names must match addresses")
 	remoteTreeHashes := make([]plumbing.Hash, len(srcNames))
+	remoteCommitHashes := make([]plumbing.Hash, len(srcNames))
 	for i := range srcNames {
-		remoteTreeHashes[i] = fetchMirror(ctx, repo, srcNames[i], srcAddrs[i], rootNS.Sub(srcNames[i]))
+		remoteCommit := fetchMirror(ctx, repo, srcNames[i], srcAddrs[i])
+		remoteTreeHashes[i] = remoteCommit.TreeHash
+		remoteCommitHashes[i] = remoteCommit.Hash
 	}
 
 	// create a common tree for all mirrors
@@ -37,14 +45,20 @@ func Mirror(ctx context.Context, repo *Repository, srcNames []string, srcAddrs [
 	mirrorsTreeHash, err := repo.Storer.SetEncodedObject(treeObject)
 	must.NoError(ctx, err)
 
+	// merge mirrors into the HEAD tree
+	head, err := repo.Head()
+	must.NoError(ctx, err)
+	headCommitObject, err := object.GetCommit(repo.Storer, head.Hash())
+	must.NoError(ctx, err)
+	mergedTreeHash := attachTreeAtPath(ctx, repo, headCommitObject.TreeHash, rootNS.Parts(), mirrorsTreeHash)
+
 	// create a commit
-	XXX
 	commit := object.Commit{
-		Author:       object.Signature{Name: "Petar", Email: "petar@example.com", When: time.Now()},
-		Committer:    object.Signature{Name: "Petar", Email: "petar@example.com", When: time.Now()},
-		Message:      "first commit",
-		TreeHash:     rootHash,
-		ParentHashes: []plumbing.Hash{c1.Hash, c2.Hash},
+		// Author:       object.Signature{Name: "Petar", Email: "petar@example.com", When: time.Now()},
+		// Committer:    object.Signature{Name: "Petar", Email: "petar@example.com", When: time.Now()},
+		Message:      "merge mirrors into HEAD",
+		TreeHash:     mergedTreeHash,
+		ParentHashes: remoteCommitHashes,
 	}
 	commitObject := repo.Storer.NewEncodedObject()
 	err = commit.Encode(commitObject)
@@ -70,7 +84,12 @@ func updateHEAD(ctx context.Context, repo *Repository, commitHash plumbing.Hash)
 	must.NoError(ctx, err)
 }
 
-func fetchMirror(ctx context.Context, repo *Repository, srcName string, srcAddr Address, dirNS ns.NS) plumbing.Hash {
+func fetchMirror(
+	ctx context.Context,
+	repo *Repository,
+	srcName string,
+	srcAddr Address,
+) object.Commit {
 
 	// fetch remote branch
 	remoteName := "mirror-" + strconv.FormatUint(uint64(rand.Int63()), 36)
@@ -95,5 +114,87 @@ func fetchMirror(ctx context.Context, repo *Repository, srcName string, srcAddr 
 	commitObject, err := object.GetCommit(repo.Storer, commitHash.Hash())
 	must.NoError(ctx, err)
 
-	return commitObject.TreeHash
+	return *commitObject
+}
+
+func mergeTrees(
+	ctx context.Context,
+	repo *Repository,
+	leftTH plumbing.Hash, // TH = TreeHash
+	rightTH plumbing.Hash,
+) plumbing.Hash {
+
+	// get trees
+	leftTree, err := object.GetTree(repo.Storer, leftTH)
+	must.NoError(ctx, err)
+	rightTree, err := object.GetTree(repo.Storer, rightTH)
+	must.NoError(ctx, err)
+
+	// merge tree entries
+	merged := map[string]object.TreeEntry{}
+	for _, left := range leftTree.Entries {
+		merged[left.Name] = left
+	}
+	for _, right := range rightTree.Entries {
+		if left, ok := merged[right.Name]; ok {
+			must.Assertf(ctx, left.Mode == filemode.Dir && right.Mode == filemode.Dir, "not a mutually exclusive merge")
+			mergedLeftRightTH := mergeTrees(ctx, repo, left.Hash, right.Hash)
+			merged[right.Name] = object.TreeEntry{Name: right.Name, Mode: filemode.Dir, Hash: mergedLeftRightTH}
+		} else {
+			merged[right.Name] = right
+		}
+	}
+
+	// rebuild tree
+	entries := make([]object.TreeEntry, 0, len(merged))
+	for _, mergedEntry := range merged {
+		entries = append(entries, mergedEntry)
+	}
+	mergedTree := object.Tree{Entries: entries}
+	treeObject := repo.Storer.NewEncodedObject()
+	err = mergedTree.Encode(treeObject)
+	must.NoError(ctx, err)
+	mergedTreeHash, err := repo.Storer.SetEncodedObject(treeObject)
+	must.NoError(ctx, err)
+
+	return mergedTreeHash
+}
+
+func prefixTree(
+	ctx context.Context,
+	repo *Repository,
+	prefix []string,
+	th plumbing.Hash,
+) plumbing.Hash {
+
+	if len(prefix) == 0 {
+		return th
+	}
+
+	mergedTree := object.Tree{
+		Entries: []object.TreeEntry{
+			{
+				Name: prefix[0],
+				Mode: filemode.Dir,
+				Hash: prefixTree(ctx, repo, prefix[1:], th)},
+		},
+	}
+	treeObject := repo.Storer.NewEncodedObject()
+	err := mergedTree.Encode(treeObject)
+	must.NoError(ctx, err)
+	prefixedTreeHash, err := repo.Storer.SetEncodedObject(treeObject)
+	must.NoError(ctx, err)
+
+	return prefixedTreeHash
+}
+
+func attachTreeAtPath(
+	ctx context.Context,
+	repo *Repository,
+	rootTH plumbing.Hash, // TH = TreeHash
+	atPath []string,
+	attachTH plumbing.Hash,
+) (newRootTH plumbing.Hash) {
+
+	return mergeTrees(ctx, repo, rootTH, prefixTree(ctx, repo, atPath, attachTH))
 }
