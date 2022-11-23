@@ -50,7 +50,8 @@ func CloneOrInit(ctx context.Context, addr Address) (*Repository, *Tree) {
 	if err == nil {
 		return repo, Worktree(ctx, repo)
 	}
-	if err != transport.ErrEmptyRemoteRepository {
+	_, isNoBranch := err.(git.NoMatchingRefSpecError)
+	if !isNoBranch && err != transport.ErrEmptyRemoteRepository {
 		must.Panic(ctx, err)
 	}
 	repo, err = git.Init(memory.NewStorage(), memfs.New())
