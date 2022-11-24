@@ -2,6 +2,7 @@ package ns
 
 import (
 	"path/filepath"
+	"strings"
 )
 
 type NS string
@@ -19,5 +20,5 @@ func (ns NS) Join(sub NS) NS {
 }
 
 func (ns NS) Parts() []string {
-	return filepath.SplitList(ns.Path())
+	return strings.Split(ns.Path(), "/") //XXX: ns must be OS independent
 }

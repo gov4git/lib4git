@@ -42,7 +42,6 @@ func TestMirror(t *testing.T) {
 		ns.NS("x/y/z"),
 	)
 
-	// <-(chan int)(nil)
 	populate(ctx, r1, "ha1", false)
 	populate(ctx, r2, "ha2", false)
 	populate(ctx, r3, "ha3", false)
@@ -76,8 +75,9 @@ func populate(ctx context.Context, r *git.Repository, nonce string, createBranch
 
 	if !createBranch {
 		fmt.Println(branch)
-		err := w.Checkout(&git.CheckoutOptions{Branch: branch})
-		// err = w.Reset(&git.ResetOptions{Mode: git.HardReset})
+		branchRef, err := r.Reference(branch, true)
+		must.NoError(ctx, err)
+		err = w.Reset(&git.ResetOptions{Commit: branchRef.Hash(), Mode: git.HardReset})
 		must.NoError(ctx, err)
 	}
 
