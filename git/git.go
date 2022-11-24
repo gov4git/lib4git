@@ -148,6 +148,12 @@ func Push(ctx context.Context, r *Repository) {
 	}
 }
 
+func Reference(ctx context.Context, r *Repository, name plumbing.ReferenceName, resolved bool) *plumbing.Reference {
+	x, err := r.Reference(name, resolved)
+	must.NoError(ctx, err)
+	return x
+}
+
 func Head(ctx context.Context, r *Repository) CommitHash {
 	h, err := r.Head()
 	must.NoError(ctx, err)

@@ -39,7 +39,8 @@ func TestMirror(t *testing.T) {
 			{Repo: URL(dir3), Branch: Branch(MainBranch)},
 		},
 		MainBranch,
-		ns.NS{"x", "y", "z"},
+		[]ns.NS{{"x", "y", "z", "r2"}, {"x", "y", "z", "r3"}},
+		true,
 	)
 
 	populate(ctx, r1, "ha1", false)
@@ -55,12 +56,13 @@ func TestMirror(t *testing.T) {
 			{Repo: URL(dir3), Branch: Branch(MainBranch)},
 		},
 		MainBranch,
-		ns.NS{"x", "y", "z"},
+		[]ns.NS{{"x", "y", "z", "r2"}, {"x", "y", "z", "r3"}},
+		true,
 	)
 
 	// TODO: add verification
 
-	<-(chan int)(nil)
+	// <-(chan int)(nil)
 }
 
 func populate(ctx context.Context, r *git.Repository, nonce string, createBranch bool) {
