@@ -39,7 +39,7 @@ func TestMirror(t *testing.T) {
 			{Repo: URL(dir3), Branch: Branch(MainBranch)},
 		},
 		MainBranch,
-		ns.NS("x/y/z"),
+		ns.NS{"x", "y", "z"},
 	)
 
 	populate(ctx, r1, "ha1", false)
@@ -55,7 +55,7 @@ func TestMirror(t *testing.T) {
 			{Repo: URL(dir3), Branch: Branch(MainBranch)},
 		},
 		MainBranch,
-		ns.NS("x/y/z"),
+		ns.NS{"x", "y", "z"},
 	)
 
 	// TODO: add verification

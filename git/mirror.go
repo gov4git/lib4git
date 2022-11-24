@@ -52,13 +52,16 @@ func Mirror(
 	must.NoError(ctx, err)
 	branchCommitObject, err := object.GetCommit(repo.Storer, branchRef.Hash())
 	must.NoError(ctx, err)
-	mergedTreeHash := attachTreeAtPath(ctx, repo, branchCommitObject.TreeHash, toNS.Parts(), mirrorsTreeHash)
+	mergedTreeHash := attachTreeAtPath(ctx, repo, branchCommitObject.TreeHash, toNS, mirrorsTreeHash)
 
 	// create a commit
+	opts := git.CommitOptions{}
+	err = opts.Validate(repo)
+	must.NoError(ctx, err)
 	commit := object.Commit{
-		// Author:       object.Signature{Name: "Petar", Email: "petar@example.com", When: time.Now()},
-		// Committer:    object.Signature{Name: "Petar", Email: "petar@example.com", When: time.Now()},
-		Message:      "merge mirrors into HEAD",
+		Author:       *opts.Author,
+		Committer:    *opts.Committer,
+		Message:      "merge mirrors",
 		TreeHash:     mergedTreeHash,
 		ParentHashes: append([]plumbing.Hash{branchCommitObject.Hash}, remoteCommitHashes...),
 	}
@@ -159,7 +162,7 @@ func mergeTrees(
 func prefixTree(
 	ctx context.Context,
 	repo *Repository,
-	prefix []string,
+	prefix ns.NS,
 	th plumbing.Hash,
 ) plumbing.Hash {
 
@@ -172,7 +175,8 @@ func prefixTree(
 			{
 				Name: prefix[0],
 				Mode: filemode.Dir, // XXX: always a dir?
-				Hash: prefixTree(ctx, repo, prefix[1:], th)},
+				Hash: prefixTree(ctx, repo, prefix[1:], th),
+			},
 		},
 	}
 	treeObject := repo.Storer.NewEncodedObject()

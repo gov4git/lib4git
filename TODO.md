@@ -1,4 +1,1 @@
-- [ ] implement NS as []string
-  - would it improve interoperability between windows and linux?
-  - [ ] what happens if a git tree entry contains directory separator chars like "/"
 - [ ] local cache for remote repos
