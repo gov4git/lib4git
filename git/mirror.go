@@ -174,7 +174,7 @@ func PrefixTree(
 		Entries: []object.TreeEntry{
 			{
 				Name: prefix[0],
-				Mode: filemode.Dir, // XXX: always a dir?
+				Mode: filemode.Dir,
 				Hash: PrefixTree(ctx, repo, prefix[1:], th),
 			},
 		},

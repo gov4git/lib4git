@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/go-git/go-billy/v5 v5.3.1
 	github.com/go-git/go-git/v5 v5.4.2
+	github.com/gofrs/flock v0.8.1
 	go.uber.org/zap v1.23.0
 )
 
