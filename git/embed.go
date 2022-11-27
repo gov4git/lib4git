@@ -2,8 +2,8 @@ package git
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
+	"path/filepath"
 	"strconv"
 
 	"github.com/go-git/go-git/v5"
@@ -15,7 +15,7 @@ import (
 	"github.com/gov4git/lib4git/ns"
 )
 
-func Mirror(
+func Embed(
 	ctx context.Context,
 	repo *Repository,
 	keys []string,
@@ -30,19 +30,19 @@ func Mirror(
 	remoteTreeHashes := make([]plumbing.Hash, len(keys))
 	remoteCommitHashes := make([]plumbing.Hash, len(keys))
 	for i := range keys {
-		remoteCommit := fetchMirror(ctx, repo, keys[i], addrs[i])
+		remoteCommit := fetchEmbedding(ctx, repo, keys[i], addrs[i])
 		remoteTreeHashes[i] = PrefixTree(ctx, repo, toNS[i], remoteCommit.TreeHash) // prefix with namespace
 		remoteCommitHashes[i] = remoteCommit.Hash
 	}
 
-	// create a common tree with all mirrors merged together
-	mirrorsTreeHash := MergeTrees(ctx, repo, remoteTreeHashes, allowOverride)
+	// create a common tree with all embeddings merged together
+	embeddingsTreeHash := MergeTrees(ctx, repo, remoteTreeHashes, allowOverride)
 
-	// merge mirrors into the toBranch tree
+	// merge embeddings into the toBranch tree
 	branchRefName := plumbing.NewBranchReferenceName(string(toBranch))
 	branchRef := Reference(ctx, repo, branchRefName, true)
 	branchCommit := GetCommit(ctx, repo, branchRef.Hash())
-	mergedTreeHash := mergeTrees(ctx, repo, branchCommit.TreeHash, mirrorsTreeHash, allowOverride)
+	mergedTreeHash := mergeTrees(ctx, repo, branchCommit.TreeHash, embeddingsTreeHash, allowOverride)
 
 	// create a commit
 	opts := git.CommitOptions{}
@@ -50,7 +50,7 @@ func Mirror(
 	commit := object.Commit{
 		Author:       *opts.Author,
 		Committer:    *opts.Committer,
-		Message:      "merge mirrors",
+		Message:      "embed remotes",
 		TreeHash:     mergedTreeHash,
 		ParentHashes: append([]plumbing.Hash{branchCommit.Hash}, remoteCommitHashes...),
 	}
@@ -64,7 +64,7 @@ func Mirror(
 	must.NoError(ctx, err)
 }
 
-func fetchMirror(
+func fetchEmbedding(
 	ctx context.Context,
 	repo *Repository,
 	key string,
@@ -72,21 +72,23 @@ func fetchMirror(
 ) object.Commit {
 
 	// fetch remote branch using an ephemeral definition of the remote (not stored in the repo)
-	nonce := "mirror-" + strconv.FormatUint(uint64(rand.Int63()), 36)
+	nonce := "embedding-" + strconv.FormatUint(uint64(rand.Int63()), 36)
+	remoteBranchName := plumbing.NewBranchReferenceName(string(addr.Branch))
+	embeddedBranchName := plumbing.NewBranchReferenceName(filepath.Join("embedding", key))
 	remote := git.NewRemote(
 		repo.Storer,
 		&config.RemoteConfig{
 			Name: nonce,
 			URLs: []string{string(addr.Repo)},
 			Fetch: []config.RefSpec{
-				config.RefSpec(fmt.Sprintf("refs/heads/%s:refs/mirrors/%s", addr.Branch, key)),
+				config.RefSpec(remoteBranchName + ":" + embeddedBranchName),
 			},
 		},
 	)
 	must.NoError(ctx, remote.FetchContext(ctx, &git.FetchOptions{RemoteName: nonce}))
 
 	// get the latest commit on remote branch
-	commitHash := Reference(ctx, repo, plumbing.ReferenceName(fmt.Sprintf("refs/mirrors/%s", key)), true)
+	commitHash := Reference(ctx, repo, embeddedBranchName, true)
 	commitObject := GetCommit(ctx, repo, commitHash.Hash())
 
 	return *commitObject

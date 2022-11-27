@@ -13,7 +13,7 @@ import (
 	"github.com/gov4git/lib4git/ns"
 )
 
-func TestMirror(t *testing.T) {
+func TestEmbed(t *testing.T) {
 	base.LogVerbosely()
 	ctx := context.Background()
 	dir := t.TempDir()
@@ -30,7 +30,7 @@ func TestMirror(t *testing.T) {
 	populate(ctx, r2, "ok2", true)
 	populate(ctx, r3, "ok3", true)
 
-	Mirror(
+	Embed(
 		ctx,
 		r1,
 		[]string{"r2", "r3"},
@@ -47,7 +47,7 @@ func TestMirror(t *testing.T) {
 	populate(ctx, r2, "ha2", false)
 	populate(ctx, r3, "ha3", false)
 
-	Mirror(
+	Embed(
 		ctx,
 		r1,
 		[]string{"r2", "r3"},

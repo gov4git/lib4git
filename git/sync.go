@@ -2,7 +2,6 @@ package git
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 	"strconv"
 
@@ -15,19 +14,41 @@ func nonceName() string {
 	return "nonce-" + strconv.FormatUint(uint64(rand.Int63()), 36)
 }
 
-func MirrorRefSpecXXX(branch Branch) config.RefSpec {
-	return config.RefSpec(fmt.Sprintf("refs/heads/%s:refs/mirrors/%s", branch, branch))
+const mirrorBranchesRefSpec = "refs/heads/*:refs/heads/*"
+const mirrorTagsRefSpec = "refs/tags/*:refs/tags/*"
+
+var mirrorRefSpecs = []config.RefSpec{mirrorBranchesRefSpec, mirrorTagsRefSpec}
+
+func PushMirror(ctx context.Context, repo *Repository, to URL) {
+	PushRefSpecs(ctx, repo, to, mirrorRefSpecs)
 }
 
-func PushRepoToURL(ctx context.Context, from *Repository, to URL, refspecs []config.RefSpec) {
+func PullMirror(ctx context.Context, repo *Repository, from URL) {
+	PushRefSpecs(ctx, repo, from, mirrorRefSpecs)
+}
+
+func PushRefSpecs(ctx context.Context, repo *Repository, to URL, refspecs []config.RefSpec) {
 	nonce := nonceName()
 	remote := git.NewRemote(
-		from.Storer,
+		repo.Storer,
 		&config.RemoteConfig{
 			Name:  nonce,
 			URLs:  []string{string(to)},
 			Fetch: refspecs,
 		},
 	)
-	must.NoError(ctx, remote.PushContext(ctx, &git.PushOptions{RemoteName: nonce}))
+	must.NoError(ctx, remote.PushContext(ctx, &git.PushOptions{RemoteName: nonce, Auth: auth}))
+}
+
+func PullRefSpecs(ctx context.Context, repo *Repository, from URL, refspecs []config.RefSpec) {
+	nonce := nonceName()
+	remote := git.NewRemote(
+		repo.Storer,
+		&config.RemoteConfig{
+			Name:  nonce,
+			URLs:  []string{string(from)},
+			Fetch: refspecs,
+		},
+	)
+	must.NoError(ctx, remote.FetchContext(ctx, &git.FetchOptions{RemoteName: nonce, Auth: auth}))
 }
