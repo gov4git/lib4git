@@ -98,7 +98,7 @@ func CloneRepo(ctx context.Context, addr Address) *Repository {
 		memfs.New(),
 		&git.CloneOptions{
 			URL:           string(addr.Repo),
-			Auth:          auth,
+			Auth:          auth, // TODO: extract from context
 			ReferenceName: plumbing.NewBranchReferenceName(string(addr.Branch)),
 			SingleBranch:  true,
 		},
@@ -146,6 +146,12 @@ func Push(ctx context.Context, r *Repository) {
 	if err := r.PushContext(ctx, &git.PushOptions{}); err != nil {
 		must.Panic(ctx, err)
 	}
+}
+
+func Reference(ctx context.Context, r *Repository, name plumbing.ReferenceName, resolved bool) *plumbing.Reference {
+	x, err := r.Reference(name, resolved)
+	must.NoError(ctx, err)
+	return x
 }
 
 func Head(ctx context.Context, r *Repository) CommitHash {
