@@ -98,7 +98,7 @@ func CloneRepo(ctx context.Context, addr Address) *Repository {
 		memfs.New(),
 		&git.CloneOptions{
 			URL:           string(addr.Repo),
-			Auth:          auth, // TODO: extract from context
+			Auth:          GetAuth(ctx, addr.Repo), // TODO: extract from context
 			ReferenceName: plumbing.NewBranchReferenceName(string(addr.Branch)),
 			SingleBranch:  true,
 		},
