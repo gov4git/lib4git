@@ -37,7 +37,7 @@ func PushRefSpecs(ctx context.Context, repo *Repository, to URL, refspecs []conf
 			Fetch: refspecs,
 		},
 	)
-	must.NoError(ctx, remote.PushContext(ctx, &git.PushOptions{RemoteName: nonce, Auth: auth}))
+	must.NoError(ctx, remote.PushContext(ctx, &git.PushOptions{RemoteName: nonce, Auth: GetAuth(ctx, to)}))
 }
 
 func PullRefSpecs(ctx context.Context, repo *Repository, from URL, refspecs []config.RefSpec) {
@@ -50,5 +50,5 @@ func PullRefSpecs(ctx context.Context, repo *Repository, from URL, refspecs []co
 			Fetch: refspecs,
 		},
 	)
-	must.NoError(ctx, remote.FetchContext(ctx, &git.FetchOptions{RemoteName: nonce, Auth: auth}))
+	must.NoError(ctx, remote.FetchContext(ctx, &git.FetchOptions{RemoteName: nonce, Auth: GetAuth(ctx, from)}))
 }
