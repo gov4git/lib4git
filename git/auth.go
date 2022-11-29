@@ -4,8 +4,6 @@ import (
 	"context"
 	"sync"
 
-	giturls "github.com/whilp/git-urls"
-
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
@@ -26,43 +24,31 @@ func MakeSSHFileAuth(ctx context.Context, user string, privKeyFile string) trans
 	return pubKey
 }
 
-// repo-dependent auth
+// global repo-dependent auth
 
 var authManager AuthManager
+
+func SetAuth(forRepo URL, a transport.AuthMethod) {
+	authManager.SetAuth(forRepo, a)
+}
 
 func GetAuth(ctx context.Context, forRepo URL) transport.AuthMethod {
 	return authManager.GetAuth(ctx, forRepo)
 }
 
 type AuthManager struct {
-	lk    sync.Mutex
-	ssh   transport.AuthMethod
-	https transport.AuthMethod
+	lk  sync.Mutex
+	url map[URL]transport.AuthMethod
 }
 
-func (x *AuthManager) SetAuthHTTPS(a transport.AuthMethod) {
+func (x *AuthManager) SetAuth(forRepo URL, a transport.AuthMethod) {
 	x.lk.Lock()
 	defer x.lk.Unlock()
-	x.https = a
-}
-
-func (x *AuthManager) SetAuthSSH(a transport.AuthMethod) {
-	x.lk.Lock()
-	defer x.lk.Unlock()
-	x.ssh = a
+	x.url[forRepo] = a
 }
 
 func (x *AuthManager) GetAuth(ctx context.Context, forRepo URL) transport.AuthMethod {
-	u, err := giturls.Parse(string(forRepo))
-	must.NoError(ctx, err)
 	x.lk.Lock()
 	defer x.lk.Unlock()
-	switch u.Scheme {
-	case "http", "https":
-		return x.https
-	case "ssh":
-		return x.ssh
-	default:
-		return nil
-	}
+	return x.url[forRepo]
 }
