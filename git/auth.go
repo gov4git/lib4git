@@ -26,7 +26,7 @@ func MakeSSHFileAuth(ctx context.Context, user string, privKeyFile string) trans
 
 // global repo-dependent auth
 
-var authManager AuthManager
+var authManager = NewAuthManager()
 
 func SetAuth(forRepo URL, a transport.AuthMethod) {
 	authManager.SetAuth(forRepo, a)
@@ -39,6 +39,10 @@ func GetAuth(ctx context.Context, forRepo URL) transport.AuthMethod {
 type AuthManager struct {
 	lk  sync.Mutex
 	url map[URL]transport.AuthMethod
+}
+
+func NewAuthManager() *AuthManager {
+	return &AuthManager{url: map[URL]transport.AuthMethod{}}
 }
 
 func (x *AuthManager) SetAuth(forRepo URL, a transport.AuthMethod) {
