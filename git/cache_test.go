@@ -1,16 +1,29 @@
 package git
 
 import (
+	"context"
+	"fmt"
+	"path/filepath"
 	"testing"
+
+	"github.com/gov4git/lib4git/base"
 )
 
 func TestCache(t *testing.T) {
-	// base.LogVerbosely()
-	// ctx := context.Background()
-	// dir := t.TempDir()
+	base.LogVerbosely()
+	ctx := context.Background()
 
-	// rem := InitPlain(ctx, dir, false)
-	// populate(ctx, rem, "ok", true)
+	dir := t.TempDir()
+	fmt.Println("test root ", dir)
+	originDir := filepath.Join(dir, "origin")
+	cacheDir := filepath.Join(dir, "cache")
+	originAddr := Address{Repo: URL(originDir), Branch: MainBranch}
 
-	// cache :=
+	InitPlain(ctx, originDir, true)
+	cache := NewCache(ctx, cacheDir)
+	cloned := cache.Clone(ctx, originAddr)
+	populate(ctx, cloned.Repo(), "hi", true)
+	cloned.Push(ctx)
+
+	// <-(chan int)(nil)
 }

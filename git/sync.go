@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/gov4git/lib4git/must"
 )
 
@@ -24,7 +25,7 @@ func PushMirror(ctx context.Context, repo *Repository, to URL) {
 }
 
 func PullMirror(ctx context.Context, repo *Repository, from URL) {
-	PushRefSpecs(ctx, repo, from, mirrorRefSpecs)
+	PullRefSpecs(ctx, repo, from, mirrorRefSpecs)
 }
 
 func PushRefSpecs(ctx context.Context, repo *Repository, to URL, refspecs []config.RefSpec) {
@@ -50,5 +51,6 @@ func PullRefSpecs(ctx context.Context, repo *Repository, from URL, refspecs []co
 			Fetch: refspecs,
 		},
 	)
-	must.NoError(ctx, remote.FetchContext(ctx, &git.FetchOptions{RemoteName: nonce, Auth: GetAuth(ctx, from)}))
+	err := remote.FetchContext(ctx, &git.FetchOptions{RemoteName: nonce, Auth: GetAuth(ctx, from)})
+	must.Assertf(ctx, err == transport.ErrEmptyRemoteRepository || err == nil, "%v", err)
 }

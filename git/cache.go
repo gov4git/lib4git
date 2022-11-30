@@ -58,8 +58,8 @@ func (x *Cache) unlockURL(u URL) {
 	x.urlLock(u).Unlock()
 }
 
-func (x *Cache) urlCachePath(u URL) string {
-	return filepath.Join(x.Dir, form.StringHashForFilename(string(u)))
+func (x *Cache) urlCachePath(u URL) URL {
+	return URL(filepath.Join(x.Dir, form.StringHashForFilename(string(u))))
 }
 
 func (x *Cache) Clone(ctx context.Context, addr Address) Cloned {
@@ -78,13 +78,13 @@ func (x *Cache) Clone(ctx context.Context, addr Address) Cloned {
 	return c
 }
 
-func openOrInitDisk(ctx context.Context, path string) *Repository {
-	repo, err := git.PlainOpen(path)
+func openOrInitDisk(ctx context.Context, path URL) *Repository {
+	repo, err := git.PlainOpen(string(path))
 	if err == nil {
 		return repo
 	}
 	must.Assertf(ctx, err == git.ErrRepositoryNotExists, "%v", err)
-	return InitPlain(ctx, path, true)
+	return InitPlain(ctx, string(path), true)
 }
 
 func openOrInitMemory(ctx context.Context) *Repository {
@@ -104,7 +104,7 @@ func (x *clonedFromCache) Repo() *Repository {
 	return x.memRepo
 }
 
-func (x *clonedFromCache) cachePath() string {
+func (x *clonedFromCache) cachePath() URL {
 	return x.cache.urlCachePath(x.addr.Repo)
 }
 
@@ -117,7 +117,7 @@ func (x *clonedFromCache) Push(ctx context.Context) {
 
 func (x *clonedFromCache) push(ctx context.Context) {
 	// push memory to disk
-	PushMirror(ctx, x.memRepo, URL(x.cachePath()))
+	PushMirror(ctx, x.memRepo, x.cachePath())
 	// push disk to net
 	PushMirror(ctx, x.diskRepo, x.addr.Repo)
 }
