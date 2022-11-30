@@ -21,9 +21,13 @@ func TestCache(t *testing.T) {
 
 	InitPlain(ctx, originDir, true)
 	cache := NewCache(ctx, cacheDir)
-	cloned := cache.Clone(ctx, originAddr)
-	populate(ctx, cloned.Repo(), "hi", true)
-	cloned.Push(ctx)
+	cloned1 := cache.Clone(ctx, originAddr)
+	populate(ctx, cloned1.Repo(), "hi", true)
+	cloned1.Push(ctx)
+
+	cloned2 := cache.Clone(ctx, originAddr)
+	populate(ctx, cloned2.Repo(), "ok", false)
+	cloned2.Push(ctx)
 
 	// <-(chan int)(nil)
 }

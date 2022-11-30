@@ -52,5 +52,8 @@ func PullRefSpecs(ctx context.Context, repo *Repository, from URL, refspecs []co
 		},
 	)
 	err := remote.FetchContext(ctx, &git.FetchOptions{RemoteName: nonce, Auth: GetAuth(ctx, from)})
-	must.Assertf(ctx, err == transport.ErrEmptyRemoteRepository || err == nil, "%v", err)
+	must.Assertf(ctx,
+		err == transport.ErrEmptyRemoteRepository ||
+			err == git.NoErrAlreadyUpToDate ||
+			err == nil, "%v", err)
 }
