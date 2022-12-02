@@ -48,6 +48,8 @@ func NewLocalAddress(ctx context.Context, t *testing.T, branch git.Branch, isBar
 	return LocalAddress{dir: dir, repo: repo, addr: addr, tree: tree}
 }
 
+func (x LocalAddress) Address() git.Address { return x.addr }
+
 func (x LocalAddress) Push(context.Context) {}
 
 func (x LocalAddress) Pull(context.Context) {}
