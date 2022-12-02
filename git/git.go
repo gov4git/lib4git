@@ -45,8 +45,8 @@ type RepoTree struct {
 	Tree *Tree
 }
 
-func CloneOrInit(ctx context.Context, addr Address) (*Repository, *Tree) {
-	repo, err := must.Try1(func() *Repository { return CloneRepo(ctx, addr) })
+func cloneOrInit(ctx context.Context, addr Address) (*Repository, *Tree) {
+	repo, err := must.Try1(func() *Repository { return cloneRepo(ctx, addr) })
 	if err == nil {
 		return repo, Worktree(ctx, repo)
 	}
@@ -92,7 +92,7 @@ func InitPlain(ctx context.Context, path string, isBare bool) *Repository {
 	return repo
 }
 
-func CloneRepo(ctx context.Context, addr Address) *Repository {
+func cloneRepo(ctx context.Context, addr Address) *Repository {
 	repo, err := git.CloneContext(ctx,
 		memory.NewStorage(),
 		memfs.New(),
@@ -108,8 +108,8 @@ func CloneRepo(ctx context.Context, addr Address) *Repository {
 	return repo
 }
 
-func Clone(ctx context.Context, addr Address) (*Repository, *Tree) {
-	repo := CloneRepo(ctx, addr)
+func clone(ctx context.Context, addr Address) (*Repository, *Tree) {
+	repo := cloneRepo(ctx, addr)
 	return repo, Worktree(ctx, repo)
 }
 
@@ -140,12 +140,6 @@ func Checkout(ctx context.Context, wt *Tree, branch Branch) {
 		},
 	)
 	must.NoError(ctx, err)
-}
-
-func Push(ctx context.Context, r *Repository) {
-	if err := r.PushContext(ctx, &git.PushOptions{}); err != nil {
-		must.Panic(ctx, err)
-	}
 }
 
 func Reference(ctx context.Context, r *Repository, name plumbing.ReferenceName, resolved bool) *plumbing.Reference {
