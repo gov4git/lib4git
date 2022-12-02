@@ -14,16 +14,6 @@ import (
 	"github.com/gov4git/lib4git/must"
 )
 
-type Proxy interface {
-	Clone(ctx context.Context, addr Address) Cloned
-}
-
-type Cloned interface {
-	Push(context.Context)
-	Pull(context.Context)
-	Repo() *Repository
-}
-
 type Cache struct {
 	Dir string
 	lk  sync.Mutex
