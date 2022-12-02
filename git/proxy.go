@@ -15,6 +15,7 @@ type Cloned interface {
 	Push(context.Context)
 	Pull(context.Context)
 	Repo() *Repository
+	Tree() *Tree
 }
 
 func ClonedTree(c Cloned) *Tree {
@@ -62,4 +63,9 @@ func (x *clonedBranch) Pull(ctx context.Context) {
 
 func (x *clonedBranch) Repo() *Repository {
 	return x.repo
+}
+
+func (x *clonedBranch) Tree() *Tree {
+	t, _ := x.Repo().Worktree()
+	return t
 }

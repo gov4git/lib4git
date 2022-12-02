@@ -94,6 +94,11 @@ func (x *clonedFromCache) Repo() *Repository {
 	return x.memRepo
 }
 
+func (x *clonedFromCache) Tree() *Tree {
+	t, _ := x.memRepo.Worktree()
+	return t
+}
+
 func (x *clonedFromCache) cachePath() URL {
 	return x.cache.urlCachePath(x.addr.Repo)
 }
