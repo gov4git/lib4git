@@ -57,3 +57,5 @@ func (x LocalAddress) Pull(context.Context) {}
 func (x LocalAddress) Repo() *git.Repository { return x.repo }
 
 func (x LocalAddress) Tree() *git.Tree { return x.tree }
+
+func (x LocalAddress) Dir() string { return x.dir }
