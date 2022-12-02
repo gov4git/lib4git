@@ -27,14 +27,14 @@ func Hang() {
 }
 
 type LocalAddress struct {
-	Dir     string
-	Repo    *git.Repository
-	Tree    *git.Tree
-	Address git.Address
+	dir  string
+	repo *git.Repository
+	tree *git.Tree
+	addr git.Address
 }
 
 func (x LocalAddress) String() string {
-	return fmt.Sprintf("test address, dir=%v\n", x.Dir)
+	return fmt.Sprintf("test address, dir=%v\n", x.dir)
 }
 
 func NewLocalAddress(ctx context.Context, t *testing.T, branch git.Branch, isBare bool) LocalAddress {
@@ -45,5 +45,13 @@ func NewLocalAddress(ctx context.Context, t *testing.T, branch git.Branch, isBar
 	if !isBare {
 		tree = git.Worktree(ctx, repo)
 	}
-	return LocalAddress{Dir: dir, Repo: repo, Address: addr, Tree: tree}
+	return LocalAddress{dir: dir, repo: repo, addr: addr, tree: tree}
 }
+
+func (x LocalAddress) Push(context.Context) {}
+
+func (x LocalAddress) Pull(context.Context) {}
+
+func (x LocalAddress) Repo() *git.Repository { return x.repo }
+
+func (x LocalAddress) Tree() *git.Tree { return x.tree }
