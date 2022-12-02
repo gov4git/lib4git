@@ -10,7 +10,7 @@ require (
 	go.uber.org/zap v1.23.0
 )
 
-replace github.com/go-git/go-git => /Users/petar/github.com/go-git/go-git
+// replace github.com/go-git/go-git => /Users/petar/github.com/go-git/go-git
 
 require (
 	github.com/Microsoft/go-winio v0.4.16 // indirect
