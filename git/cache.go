@@ -8,6 +8,8 @@ import (
 
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/gofrs/flock"
 	"github.com/gov4git/lib4git/form"
@@ -65,6 +67,17 @@ func (x *Cache) Clone(ctx context.Context, addr Address) Cloned {
 		memRepo:  openOrInitMemory(ctx),
 	}
 	c.pull(ctx)
+
+	// switch to or create branch
+	err := must.Try(func() { Checkout(ctx, Worktree(ctx, c.memRepo), addr.Branch) })
+	switch {
+	case err == plumbing.ErrReferenceNotFound:
+		must.NoError(ctx, c.memRepo.CreateBranch(&config.Branch{Name: string(addr.Branch)}))
+		Checkout(ctx, Worktree(ctx, c.memRepo), addr.Branch)
+	case err != nil:
+		must.NoError(ctx, err)
+	}
+
 	return c
 }
 

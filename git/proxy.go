@@ -18,19 +18,6 @@ type Cloned interface {
 	Tree() *Tree
 }
 
-func ClonedTree(c Cloned) *Tree {
-	_, t := ClonedRepoTree(c)
-	return t
-}
-
-func ClonedRepoTree(c Cloned) (*Repository, *Tree) {
-	t, err := c.Repo().Worktree()
-	if err != nil {
-		panic("clone without a tree")
-	}
-	return c.Repo(), t
-}
-
 func Clone(ctx context.Context, addr Address) Cloned {
 	return &clonedBranch{addr: addr, repo: cloneRepo(ctx, addr)}
 }
