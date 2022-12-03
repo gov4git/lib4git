@@ -18,11 +18,11 @@ type Cloned interface {
 	Tree() *Tree
 }
 
-func Clone(ctx context.Context, addr Address) Cloned {
+func GitClone(ctx context.Context, addr Address) Cloned {
 	return &clonedBranch{addr: addr, repo: cloneRepo(ctx, addr)}
 }
 
-func CloneOrInit(ctx context.Context, addr Address) Cloned {
+func GitCloneOrInit(ctx context.Context, addr Address) Cloned {
 	repo, _ := cloneOrInit(ctx, addr)
 	return &clonedBranch{addr: addr, repo: repo}
 }
