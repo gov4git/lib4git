@@ -13,7 +13,7 @@ var (
 func UseCache(ctx context.Context, dir string) {
 	cacheLk.Lock()
 	defer cacheLk.Unlock()
-	proxy = NewCache(ctx, dir)
+	proxy = NewMirrorCache(ctx, dir)
 }
 
 func getProxy() Proxy {

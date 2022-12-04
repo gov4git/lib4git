@@ -19,7 +19,7 @@ type Cloned interface {
 }
 
 func GitClone(ctx context.Context, addr Address) Cloned {
-	return &clonedBranch{addr: addr, repo: cloneRepo(ctx, addr)}
+	return &clonedBranch{addr: addr, repo: cloneToMemory(ctx, addr)}
 }
 
 func GitCloneOrInit(ctx context.Context, addr Address) Cloned {

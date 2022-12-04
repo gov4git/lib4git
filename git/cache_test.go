@@ -20,7 +20,7 @@ func TestCache(t *testing.T) {
 	originAddr := Address{Repo: URL(originDir), Branch: MainBranch}
 
 	InitPlain(ctx, originDir, true)
-	cache := NewCache(ctx, cacheDir)
+	cache := NewMirrorCache(ctx, cacheDir)
 	cloned1 := cache.Clone(ctx, originAddr)
 	populate(ctx, cloned1.Repo(), "hi", true)
 	cloned1.Push(ctx)
