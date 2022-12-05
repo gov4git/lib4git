@@ -37,6 +37,10 @@ func (a Address) String() string {
 	return string(a.Repo) + ":" + string(a.Branch)
 }
 
+func (a Address) Hash() string {
+	return form.StringHashForFilename(a.String())
+}
+
 func NewAddress(repo URL, branch Branch) Address {
 	return Address{Repo: repo, Branch: branch}
 }

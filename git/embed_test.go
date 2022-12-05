@@ -33,7 +33,6 @@ func TestEmbed(t *testing.T) {
 	Embed(
 		ctx,
 		r1,
-		[]string{"r2", "r3"},
 		[]Address{
 			{Repo: URL(dir2), Branch: Branch(MainBranch)},
 			{Repo: URL(dir3), Branch: Branch(MainBranch)},
@@ -50,7 +49,6 @@ func TestEmbed(t *testing.T) {
 	Embed(
 		ctx,
 		r1,
-		[]string{"r2", "r3"},
 		[]Address{
 			{Repo: URL(dir2), Branch: Branch(MainBranch)},
 			{Repo: URL(dir3), Branch: Branch(MainBranch)},
