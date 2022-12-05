@@ -91,12 +91,16 @@ func cloneOrInit(ctx context.Context, addr Address) (*Repository, *Tree) {
 	return repo, Worktree(ctx, repo)
 }
 
-func ChangeDefaultBranch(ctx context.Context, repo *Repository, default_ Branch) {
-	// https://github.com/hairyhenderson/gomplate/pull/1217/files#diff-06d907e05a1688ce7548c3d8b4877a01a61b3db506755db4419761dbe9fe0a5bR232
-	branch := plumbing.NewBranchReferenceName(string(default_))
-	h := plumbing.NewSymbolicReference(plumbing.HEAD, branch)
+func SetHeadToBranch(ctx context.Context, repo *Repository, branch Branch) {
+	branchName := plumbing.NewBranchReferenceName(string(branch))
+	h := plumbing.NewSymbolicReference(plumbing.HEAD, branchName)
 	err := repo.Storer.SetReference(h)
 	must.NoError(ctx, err)
+}
+
+func ChangeDefaultBranch(ctx context.Context, repo *Repository, default_ Branch) {
+	// https://github.com/hairyhenderson/gomplate/pull/1217/files#diff-06d907e05a1688ce7548c3d8b4877a01a61b3db506755db4419761dbe9fe0a5bR232
+	SetHeadToBranch(ctx, repo, default_)
 
 	c, err := repo.Config()
 	must.NoError(ctx, err)

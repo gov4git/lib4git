@@ -70,7 +70,8 @@ func (x *MirrorCache) Clone(ctx context.Context, addr Address) Cloned {
 	switch {
 	case err == plumbing.ErrReferenceNotFound:
 		must.NoError(ctx, c.memRepo.CreateBranch(&config.Branch{Name: string(addr.Branch)}))
-		Checkout(ctx, Worktree(ctx, c.memRepo), addr.Branch)
+		SetHeadToBranch(ctx, c.memRepo, addr.Branch)
+		// must.NoError(ctx, Worktree(ctx, c.memRepo).Reset(&git.ResetOptions{Mode: git.HardReset}))
 	case err != nil:
 		must.NoError(ctx, err)
 	}

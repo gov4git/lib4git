@@ -9,6 +9,8 @@ import (
 	"github.com/gov4git/lib4git/base"
 )
 
+var testBranch = Branch("test")
+
 func TestCache(t *testing.T) {
 	base.LogVerbosely()
 	ctx := context.Background()
@@ -17,7 +19,7 @@ func TestCache(t *testing.T) {
 	fmt.Println("test root ", dir)
 	originDir := filepath.Join(dir, "origin")
 	cacheDir := filepath.Join(dir, "cache")
-	originAddr := Address{Repo: URL(originDir), Branch: MainBranch}
+	originAddr := Address{Repo: URL(originDir), Branch: testBranch}
 
 	InitPlain(ctx, originDir, true)
 	cache := NewMirrorCache(ctx, cacheDir)
