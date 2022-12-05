@@ -17,8 +17,9 @@ func nonceName() string {
 
 const mirrorBranchesRefSpec = "refs/heads/*:refs/heads/*"
 const mirrorTagsRefSpec = "refs/tags/*:refs/tags/*"
+const mirrorHeadRefSpec = "refs/HEAD:refs/HEAD"
 
-var mirrorRefSpecs = []config.RefSpec{mirrorBranchesRefSpec, mirrorTagsRefSpec}
+var mirrorRefSpecs = []config.RefSpec{mirrorBranchesRefSpec, mirrorTagsRefSpec /*, mirrorHeadRefSpec*/}
 
 func PushAll(ctx context.Context, repo *Repository, to URL) {
 	Push(ctx, repo, to, mirrorRefSpecs)
