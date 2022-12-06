@@ -45,7 +45,7 @@ func Embed(
 	mergedTreeHash := mergeTrees(ctx, repo, branchCommit.TreeHash, embeddingsTreeHash, allowOverride)
 
 	// create a commit
-	opts := git.CommitOptions{}
+	opts := git.CommitOptions{Author: GetAuthor()}
 	must.NoError(ctx, opts.Validate(repo))
 	commit := object.Commit{
 		Author:       *opts.Author,

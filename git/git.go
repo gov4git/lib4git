@@ -128,7 +128,7 @@ func Add(ctx context.Context, wt *Tree, path string) {
 }
 
 func Commit(ctx context.Context, wt *Tree, msg string) {
-	if _, err := wt.Commit(msg, &git.CommitOptions{}); err != nil {
+	if _, err := wt.Commit(msg, &git.CommitOptions{Author: GetAuthor()}); err != nil {
 		must.Panic(ctx, err)
 	}
 }

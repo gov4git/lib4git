@@ -91,6 +91,6 @@ func populate(ctx context.Context, r *git.Repository, nonce string, createBranch
 	must.NoError(ctx, err)
 	_, err = w.Add(nonce)
 	must.NoError(ctx, err)
-	_, err = w.Commit(nonce, &git.CommitOptions{})
+	_, err = w.Commit(nonce, &git.CommitOptions{Author: GetAuthor()})
 	must.NoError(ctx, err)
 }
