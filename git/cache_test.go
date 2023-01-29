@@ -51,7 +51,7 @@ func TestCache(t *testing.T) {
 	populate2(ctx, cloned4.Repo(), "ok5")
 	cloned4.Push(ctx)
 
-	<-(chan int)(nil)
+	// <-(chan int)(nil)
 }
 
 func populate2(ctx context.Context, r *git.Repository, nonce string) {
