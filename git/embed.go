@@ -18,7 +18,6 @@ import (
 func Embed(
 	ctx context.Context,
 	repo *Repository,
-	keys []string,
 	addrs []Address,
 	toBranch Branch,
 	toNS []ns.NS,
@@ -26,11 +25,11 @@ func Embed(
 ) {
 
 	// fetch remotes
-	must.Assertf(ctx, len(toNS) == len(addrs) && len(keys) == len(addrs), "names and keys must match addresses")
-	remoteTreeHashes := make([]plumbing.Hash, len(keys))
-	remoteCommitHashes := make([]plumbing.Hash, len(keys))
-	for i := range keys {
-		remoteCommit := fetchEmbedding(ctx, repo, keys[i], addrs[i])
+	must.Assertf(ctx, len(toNS) == len(addrs), "namespaces and addresses must be same count")
+	remoteTreeHashes := make([]plumbing.Hash, len(addrs))
+	remoteCommitHashes := make([]plumbing.Hash, len(addrs))
+	for i := range addrs {
+		remoteCommit := fetchEmbedding(ctx, repo, addrs[i])
 		remoteTreeHashes[i] = PrefixTree(ctx, repo, toNS[i], remoteCommit.TreeHash) // prefix with namespace
 		remoteCommitHashes[i] = remoteCommit.Hash
 	}
@@ -64,14 +63,10 @@ func Embed(
 	must.NoError(ctx, err)
 }
 
-func fetchEmbedding(
-	ctx context.Context,
-	repo *Repository,
-	key string,
-	addr Address,
-) object.Commit {
+func fetchEmbedding(ctx context.Context, repo *Repository, addr Address) object.Commit {
 
 	// fetch remote branch using an ephemeral definition of the remote (not stored in the repo)
+	key := addr.Hash()
 	nonce := "embedding-" + strconv.FormatUint(uint64(rand.Int63()), 36)
 	remoteBranchName := plumbing.NewBranchReferenceName(string(addr.Branch))
 	embeddedBranchName := plumbing.NewBranchReferenceName(filepath.Join("embedding", key))

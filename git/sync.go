@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"strconv"
 
@@ -17,18 +18,65 @@ func nonceName() string {
 
 const mirrorBranchesRefSpec = "refs/heads/*:refs/heads/*"
 const mirrorTagsRefSpec = "refs/tags/*:refs/tags/*"
+const mirrorHeadRefSpec = "refs/HEAD:refs/HEAD"
 
-var mirrorRefSpecs = []config.RefSpec{mirrorBranchesRefSpec, mirrorTagsRefSpec}
+var mirrorRefSpecs = []config.RefSpec{mirrorBranchesRefSpec /*, mirrorTagsRefSpec, mirrorHeadRefSpec*/}
 
-func PushMirror(ctx context.Context, repo *Repository, to URL) {
-	PushRefSpecs(ctx, repo, to, mirrorRefSpecs)
+func branchRefSpec(b Branch) []config.RefSpec {
+	return []config.RefSpec{
+		config.RefSpec(fmt.Sprintf("refs/heads/%s:refs/heads/%s", b, b)),
+	}
 }
 
-func PullMirror(ctx context.Context, repo *Repository, from URL) {
-	PullRefSpecs(ctx, repo, from, mirrorRefSpecs)
+func PushAll(ctx context.Context, repo *Repository, to URL) {
+	Push(ctx, repo, to, mirrorRefSpecs)
 }
 
-func PushRefSpecs(ctx context.Context, repo *Repository, to URL, refspecs []config.RefSpec) {
+func PullAll(ctx context.Context, repo *Repository, from URL) {
+	Pull(ctx, repo, from, mirrorRefSpecs)
+}
+
+func overwriteRemote(ctx context.Context, repo *Repository, to URL, refspecs []config.RefSpec) (*git.Remote, string) {
+	remoteName := to.Hash()
+	remoteConfig := &config.RemoteConfig{
+		Name:  remoteName,
+		URLs:  []string{string(to)},
+		Fetch: refspecs,
+	}
+	remote, err := repo.CreateRemote(remoteConfig)
+	if err != nil {
+		if err != git.ErrRemoteExists {
+			must.NoError(ctx, err)
+		}
+		err = repo.DeleteRemote(remoteName)
+		must.NoError(ctx, err)
+		remote, err = repo.CreateRemote(remoteConfig)
+		must.NoError(ctx, err)
+	}
+	return remote, remoteName
+}
+
+// Push implements `git push`. It creates a remote, whose name is the hash of the remote repo's URL.
+// If the remote exists, it is overwritten.
+func Push(ctx context.Context, repo *Repository, to URL, refspecs []config.RefSpec) {
+	remote, remoteName := overwriteRemote(ctx, repo, to, refspecs)
+	must.NoError(ctx, remote.PushContext(ctx, &git.PushOptions{RemoteName: remoteName, Auth: GetAuth(ctx, to)}))
+}
+
+// Push implements `git pull`. It creates a remote, whose name is the hash of the remote repo's URL.
+// If the remote exists, it is overwritten.
+func Pull(ctx context.Context, repo *Repository, from URL, refspecs []config.RefSpec) {
+	remote, remoteName := overwriteRemote(ctx, repo, from, refspecs)
+	must.NoError(ctx, remote.FetchContext(ctx, &git.FetchOptions{RemoteName: remoteName, Auth: GetAuth(ctx, from)}))
+	err := remote.FetchContext(ctx, &git.FetchOptions{RemoteName: remoteName, Auth: GetAuth(ctx, from)})
+	must.Assertf(ctx,
+		err == transport.ErrEmptyRemoteRepository ||
+			err == git.NoErrAlreadyUpToDate ||
+			err == nil, "%v", err)
+}
+
+// PushOnce implements `git push` without creating a new remote entry.
+func PushOnce(ctx context.Context, repo *Repository, to URL, refspecs []config.RefSpec) {
 	nonce := nonceName()
 	remote := git.NewRemote(
 		repo.Storer,
@@ -41,7 +89,8 @@ func PushRefSpecs(ctx context.Context, repo *Repository, to URL, refspecs []conf
 	must.NoError(ctx, remote.PushContext(ctx, &git.PushOptions{RemoteName: nonce, Auth: GetAuth(ctx, to)}))
 }
 
-func PullRefSpecs(ctx context.Context, repo *Repository, from URL, refspecs []config.RefSpec) {
+// PullOnce implements `git pull` without creating a new remote entry.
+func PullOnce(ctx context.Context, repo *Repository, from URL, refspecs []config.RefSpec) {
 	nonce := nonceName()
 	remote := git.NewRemote(
 		repo.Storer,
@@ -52,8 +101,10 @@ func PullRefSpecs(ctx context.Context, repo *Repository, from URL, refspecs []co
 		},
 	)
 	err := remote.FetchContext(ctx, &git.FetchOptions{RemoteName: nonce, Auth: GetAuth(ctx, from)})
+	_, isNoMatchingRefSpec := err.(git.NoMatchingRefSpecError)
 	must.Assertf(ctx,
 		err == transport.ErrEmptyRemoteRepository ||
 			err == git.NoErrAlreadyUpToDate ||
+			isNoMatchingRefSpec ||
 			err == nil, "%v", err)
 }

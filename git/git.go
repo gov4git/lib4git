@@ -10,10 +10,15 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/storage/memory"
+	"github.com/gov4git/lib4git/form"
 	"github.com/gov4git/lib4git/must"
 )
 
 type URL string
+
+func (u URL) Hash() string {
+	return form.StringHashForFilename(string(u))
+}
 
 type Branch string
 
@@ -32,6 +37,10 @@ func (a Address) String() string {
 	return string(a.Repo) + ":" + string(a.Branch)
 }
 
+func (a Address) Hash() string {
+	return form.StringHashForFilename(a.String())
+}
+
 func NewAddress(repo URL, branch Branch) Address {
 	return Address{Repo: repo, Branch: branch}
 }
@@ -45,8 +54,27 @@ type RepoTree struct {
 	Tree *Tree
 }
 
+func initInMemory(ctx context.Context) *Repository {
+	repo, err := git.Init(memory.NewStorage(), memfs.New())
+	must.NoError(ctx, err)
+	return repo
+}
+
+func initOnDisk(ctx context.Context, dir string) *Repository {
+	return InitPlain(ctx, dir, false)
+}
+
+func openOrInitOnDisk(ctx context.Context, path URL) *Repository {
+	repo, err := git.PlainOpen(string(path))
+	if err == nil {
+		return repo
+	}
+	must.Assertf(ctx, err == git.ErrRepositoryNotExists, "%v", err)
+	return initOnDisk(ctx, string(path))
+}
+
 func cloneOrInit(ctx context.Context, addr Address) (*Repository, *Tree) {
-	repo, err := must.Try1(func() *Repository { return cloneRepo(ctx, addr) })
+	repo, err := must.Try1(func() *Repository { return cloneToMemory(ctx, addr) })
 	if err == nil {
 		return repo, Worktree(ctx, repo)
 	}
@@ -54,8 +82,7 @@ func cloneOrInit(ctx context.Context, addr Address) (*Repository, *Tree) {
 	if !isNoBranch && err != transport.ErrEmptyRemoteRepository {
 		must.Panic(ctx, err)
 	}
-	repo, err = git.Init(memory.NewStorage(), memfs.New())
-	must.NoError(ctx, err)
+	repo = initInMemory(ctx)
 
 	_, err = repo.CreateRemote(&config.RemoteConfig{Name: Origin, URLs: []string{string(addr.Repo)}})
 	must.NoError(ctx, err)
@@ -68,16 +95,20 @@ func cloneOrInit(ctx context.Context, addr Address) (*Repository, *Tree) {
 	return repo, Worktree(ctx, repo)
 }
 
-func ChangeDefaultBranch(ctx context.Context, repo *Repository, main Branch) {
-	// https://github.com/hairyhenderson/gomplate/pull/1217/files#diff-06d907e05a1688ce7548c3d8b4877a01a61b3db506755db4419761dbe9fe0a5bR232
-	branch := plumbing.NewBranchReferenceName(string(main))
-	h := plumbing.NewSymbolicReference(plumbing.HEAD, branch)
+func SetHeadToBranch(ctx context.Context, repo *Repository, branch Branch) {
+	branchName := plumbing.NewBranchReferenceName(string(branch))
+	h := plumbing.NewSymbolicReference(plumbing.HEAD, branchName)
 	err := repo.Storer.SetReference(h)
 	must.NoError(ctx, err)
+}
+
+func ChangeDefaultBranch(ctx context.Context, repo *Repository, default_ Branch) {
+	// https://github.com/hairyhenderson/gomplate/pull/1217/files#diff-06d907e05a1688ce7548c3d8b4877a01a61b3db506755db4419761dbe9fe0a5bR232
+	SetHeadToBranch(ctx, repo, default_)
 
 	c, err := repo.Config()
 	must.NoError(ctx, err)
-	c.Init.DefaultBranch = string(main)
+	c.Init.DefaultBranch = string(default_)
 
 	err = repo.Storer.SetConfig(c)
 	must.NoError(ctx, err)
@@ -92,7 +123,7 @@ func InitPlain(ctx context.Context, path string, isBare bool) *Repository {
 	return repo
 }
 
-func cloneRepo(ctx context.Context, addr Address) *Repository {
+func cloneToMemory(ctx context.Context, addr Address) *Repository {
 	repo, err := git.CloneContext(ctx,
 		memory.NewStorage(),
 		memfs.New(),
@@ -100,17 +131,11 @@ func cloneRepo(ctx context.Context, addr Address) *Repository {
 			URL:           string(addr.Repo),
 			Auth:          GetAuth(ctx, addr.Repo), // TODO: extract from context
 			ReferenceName: plumbing.NewBranchReferenceName(string(addr.Branch)),
-			SingleBranch:  true,
 		},
 	)
 	must.NoError(ctx, err)
 
 	return repo
-}
-
-func clone(ctx context.Context, addr Address) (*Repository, *Tree) {
-	repo := cloneRepo(ctx, addr)
-	return repo, Worktree(ctx, repo)
 }
 
 func Worktree(ctx context.Context, repo *Repository) *Tree {

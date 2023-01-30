@@ -4,10 +4,13 @@ import (
 	"context"
 	"strconv"
 	"sync"
+
+	"github.com/gov4git/lib4git/git"
 )
 
 func NewCtx() context.Context {
-	return context.WithValue(context.Background(), counterKey{}, &counter{})
+	ctxWithAuth := git.WithAuth(context.Background(), nil)
+	return context.WithValue(ctxWithAuth, counterKey{}, &counter{})
 }
 
 type counterKey struct{}
