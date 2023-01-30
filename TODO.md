@@ -1,1 +1,2 @@
-- [ ] local cache for remote repos
+- [√] local cache for remote repos
+- [√] auth in context

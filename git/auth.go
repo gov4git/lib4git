@@ -24,18 +24,26 @@ func MakeSSHFileAuth(ctx context.Context, user string, privKeyFile string) trans
 	return pubKey
 }
 
-// global repo-dependent auth
+// auth manager in context
 
-var authManager = NewAuthManager()
+type contextKeyAuthManager struct{}
 
-func SetAuth(forRepo URL, a transport.AuthMethod) {
-	authManager.SetAuth(forRepo, a)
+func WithAuth(ctx context.Context, am *AuthManager) context.Context {
+	if am == nil {
+		am = NewAuthManager()
+	}
+	return context.WithValue(ctx, contextKeyAuthManager{}, am)
+}
+
+func SetAuth(ctx context.Context, forRepo URL, a transport.AuthMethod) {
+	ctx.Value(contextKeyAuthManager{}).(*AuthManager).SetAuth(forRepo, a)
 }
 
 func GetAuth(ctx context.Context, forRepo URL) transport.AuthMethod {
-	return authManager.GetAuth(ctx, forRepo)
+	return ctx.Value(contextKeyAuthManager{}).(*AuthManager).GetAuth(forRepo)
 }
 
+// AuthManager provides authentication methods given a repo URL.
 type AuthManager struct {
 	lk  sync.Mutex
 	url map[URL]transport.AuthMethod
@@ -51,7 +59,7 @@ func (x *AuthManager) SetAuth(forRepo URL, a transport.AuthMethod) {
 	x.url[forRepo] = a
 }
 
-func (x *AuthManager) GetAuth(ctx context.Context, forRepo URL) transport.AuthMethod {
+func (x *AuthManager) GetAuth(forRepo URL) transport.AuthMethod {
 	x.lk.Lock()
 	defer x.lk.Unlock()
 	return x.url[forRepo]
