@@ -28,33 +28,37 @@ func TestCache(t *testing.T) {
 	cacheDir := filepath.Join(dir, "cache")
 	originAddr := Address{Repo: URL(originDir), Branch: testBranch}
 
+	// init origin and cache
 	InitPlain(ctx, originDir, true)
 	cache := NewMirrorCache(ctx, cacheDir)
+
 	cloned1 := cache.Clone(ctx, originAddr)
-	populate2(ctx, cloned1.Repo(), "ok1")
+	populateNonce(ctx, cloned1.Repo(), "ok1")
 	cloned1.Push(ctx)
 
 	cloned2 := cache.Clone(ctx, originAddr)
-	populate2(ctx, cloned2.Repo(), "ok2")
+	findNonce(ctx, cloned2.Repo(), "ok1")
+	populateNonce(ctx, cloned2.Repo(), "ok2")
 	cloned2.Tree().Checkout(&git.CheckoutOptions{
 		Branch: plumbing.NewBranchReferenceName(string(test2Branch)),
 		Create: true,
 	})
-	populate2(ctx, cloned2.Repo(), "ok3")
+	populateNonce(ctx, cloned2.Repo(), "ok3")
 	cloned2.Push(ctx)
 
 	cloned3 := cache.Clone(ctx, Address{Repo: URL(originDir), Branch: test3Branch})
-	populate2(ctx, cloned3.Repo(), "ok4")
+	populateNonce(ctx, cloned3.Repo(), "ok5")
 	cloned3.Push(ctx)
 
 	cloned4 := cache.Clone(ctx, Address{Repo: URL(originDir), Branch: test2Branch})
-	populate2(ctx, cloned4.Repo(), "ok5")
+	findNonce(ctx, cloned4.Repo(), "ok3")
+	populateNonce(ctx, cloned4.Repo(), "ok6")
 	cloned4.Push(ctx)
 
 	// <-(chan int)(nil)
 }
 
-func populate2(ctx context.Context, r *git.Repository, nonce string) {
+func populateNonce(ctx context.Context, r *git.Repository, nonce string) {
 	w, err := r.Worktree()
 	must.NoError(ctx, err)
 
@@ -66,5 +70,13 @@ func populate2(ctx context.Context, r *git.Repository, nonce string) {
 	_, err = w.Add(nonce)
 	must.NoError(ctx, err)
 	_, err = w.Commit(nonce, &git.CommitOptions{})
+	must.NoError(ctx, err)
+}
+
+func findNonce(ctx context.Context, r *git.Repository, nonce string) {
+	w, err := r.Worktree()
+	must.NoError(ctx, err)
+
+	_, err = w.Filesystem.Stat(nonce)
 	must.NoError(ctx, err)
 }

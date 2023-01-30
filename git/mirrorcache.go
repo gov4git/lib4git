@@ -106,11 +106,10 @@ func (x *clonedMirrorCache) Push(ctx context.Context) {
 	x.push(ctx)
 }
 
+// push pushes all local branches to the remote origin.
 func (x *clonedMirrorCache) push(ctx context.Context) {
-	// push memory to disk
-	PushMirror(ctx, x.memRepo, x.cachePath())
-	// push disk to net
-	PushMirror(ctx, x.diskRepo, x.addr.Repo)
+	PushOnce(ctx, x.memRepo, x.cachePath(), mirrorRefSpecs) // push memory to disk
+	PushOnce(ctx, x.diskRepo, x.addr.Repo, mirrorRefSpecs)  // push disk to net
 }
 
 func (x *clonedMirrorCache) Pull(ctx context.Context) {
@@ -120,9 +119,9 @@ func (x *clonedMirrorCache) Pull(ctx context.Context) {
 	x.pull(ctx)
 }
 
+// pull pulls only the branch explicitly named in the clone invocation.
 func (x *clonedMirrorCache) pull(ctx context.Context) {
-	// pull net into disk
-	PullMirror(ctx, x.diskRepo, x.addr.Repo)
-	// pull disk into memory
-	PullMirror(ctx, x.memRepo, URL(x.cachePath()))
+	refSpec := branchRefSpec(x.addr.Branch)
+	PullOnce(ctx, x.diskRepo, x.addr.Repo, refSpec)  // pull net into disk
+	PullOnce(ctx, x.memRepo, x.cachePath(), refSpec) // pull disk into memory
 }
