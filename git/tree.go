@@ -5,14 +5,34 @@ import (
 	"path/filepath"
 
 	"github.com/go-git/go-git/v5/plumbing/format/index"
+	"github.com/gov4git/lib4git/file"
 	"github.com/gov4git/lib4git/form"
 	"github.com/gov4git/lib4git/must"
+	"github.com/gov4git/lib4git/ns"
 )
 
 func TreeMkdirAll(ctx context.Context, t *Tree, path string) {
 	err := t.Filesystem.MkdirAll(path, 0755)
 	must.NoError(ctx, err)
 }
+
+//
+
+func StringToFile(ctx context.Context, t *Tree, path ns.NS, content string) {
+	TreeMkdirAll(ctx, t, filepath.Dir(path.Path()))
+	file.StringToFile(ctx, t.Filesystem, path, content)
+}
+
+func StringToFileStage(ctx context.Context, t *Tree, path ns.NS, content string) {
+	StringToFile(ctx, t, path, content)
+	Add(ctx, t, path.Path())
+}
+
+func FileToString(ctx context.Context, t *Tree, path ns.NS) string {
+	return file.FileToString(ctx, t.Filesystem, path)
+}
+
+//
 
 func ToFile[V form.Form](ctx context.Context, t *Tree, filePath string, value V) {
 	TreeMkdirAll(ctx, t, filepath.Dir(filePath))
