@@ -3,6 +3,7 @@ package git
 import (
 	"context"
 	"fmt"
+	"path"
 
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
@@ -12,6 +13,7 @@ import (
 	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/gov4git/lib4git/form"
 	"github.com/gov4git/lib4git/must"
+	"github.com/gov4git/lib4git/ns"
 )
 
 type URL string
@@ -31,6 +33,14 @@ const Origin = "origin"
 type Address struct {
 	Repo   URL
 	Branch Branch
+}
+
+func (a Address) Sub(s string) Address {
+	return Address{Repo: a.Repo, Branch: Branch(path.Join(string(a.Branch), s))}
+}
+
+func (a Address) Join(s ns.NS) Address {
+	return Address{Repo: a.Repo, Branch: Branch(path.Join(string(a.Branch), s.Path()))}
 }
 
 func (a Address) String() string {
