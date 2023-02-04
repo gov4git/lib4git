@@ -16,6 +16,16 @@ func (ns NS) Path() string {
 	return filepath.Join(ns...)
 }
 
+func (ns NS) Ext(ext string) NS {
+	if len(ns) == 0 {
+		return NS{"." + ext}
+	}
+	xs := make(NS, len(ns))
+	copy(xs, ns)
+	xs[len(xs)-1] = xs[len(xs)-1] + "." + ext
+	return xs
+}
+
 func (ns NS) Sub(path string) NS {
 	sub := make(NS, len(ns)+1)
 	for i := range ns {
