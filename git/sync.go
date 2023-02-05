@@ -28,6 +28,12 @@ func branchRefSpec(b Branch) []config.RefSpec {
 	}
 }
 
+func branchSubtreeRefSpec(b Branch) []config.RefSpec {
+	return []config.RefSpec{
+		config.RefSpec(fmt.Sprintf("refs/heads/%s/*:refs/heads/%s/*", b, b)),
+	}
+}
+
 func PushAll(ctx context.Context, repo *Repository, to URL) {
 	Push(ctx, repo, to, mirrorRefSpecs)
 }

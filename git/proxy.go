@@ -9,6 +9,7 @@ import (
 
 type Proxy interface {
 	Clone(ctx context.Context, addr Address) Cloned
+	ClonePrefix(ctx context.Context, prefix Address) Cloned // clone all branches with prefix addr.Branch
 }
 
 type Cloned interface {
@@ -19,22 +20,28 @@ type Cloned interface {
 }
 
 func GitClone(ctx context.Context, addr Address) Cloned {
-	return &clonedBranch{addr: addr, repo: cloneToMemory(ctx, addr)}
+	return &clonedBranch{prefix: false, addr: addr, repo: cloneToMemory(ctx, addr)}
+}
+
+func GitClonePrefix(ctx context.Context, addr Address) Cloned {
+	return &clonedBranch{prefix: true, addr: addr, repo: cloneToMemory(ctx, addr)}
 }
 
 func GitCloneOrInit(ctx context.Context, addr Address) Cloned {
 	repo, _ := cloneOrInit(ctx, addr)
-	return &clonedBranch{addr: addr, repo: repo}
+	return &clonedBranch{prefix: false, addr: addr, repo: repo}
 }
 
 type clonedBranch struct {
-	addr Address
-	repo *Repository
+	prefix bool
+	addr   Address
+	repo   *Repository
 }
 
 func (x *clonedBranch) Push(ctx context.Context) {
 	if err := x.repo.PushContext(ctx, &git.PushOptions{
-		Auth: GetAuth(ctx, x.addr.Repo),
+		RefSpecs: mirrorRefSpecs,
+		Auth:     GetAuth(ctx, x.addr.Repo),
 	}); err != nil {
 		must.Panic(ctx, err)
 	}
@@ -42,7 +49,8 @@ func (x *clonedBranch) Push(ctx context.Context) {
 
 func (x *clonedBranch) Pull(ctx context.Context) {
 	if err := x.repo.FetchContext(ctx, &git.FetchOptions{
-		Auth: GetAuth(ctx, x.addr.Repo),
+		RefSpecs: clonePullRefSpecs(x.addr, x.prefix),
+		Auth:     GetAuth(ctx, x.addr.Repo),
 	}); err != nil {
 		must.Panic(ctx, err)
 	}

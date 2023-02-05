@@ -52,12 +52,20 @@ func (x *MirrorCache) urlCachePath(u URL) URL {
 }
 
 func (x *MirrorCache) Clone(ctx context.Context, addr Address) Cloned {
+	return x.clone(ctx, addr, false)
+}
 
+func (x *MirrorCache) ClonePrefix(ctx context.Context, addr Address) Cloned {
+	return x.clone(ctx, addr, true)
+}
+
+func (x *MirrorCache) clone(ctx context.Context, addr Address, prefix bool) Cloned {
 	// lock access to url cache
 	x.lockURL(addr.Repo)
 	defer x.unlockURL(addr.Repo)
 
 	c := &clonedMirrorCache{
+		prefix:   prefix,
 		cache:    x,
 		addr:     addr,
 		diskRepo: openOrInitOnDisk(ctx, x.urlCachePath(addr.Repo)),
@@ -65,15 +73,17 @@ func (x *MirrorCache) Clone(ctx context.Context, addr Address) Cloned {
 	}
 	c.pull(ctx)
 
-	// switch to or create branch
-	err := must.Try(func() { Checkout(ctx, Worktree(ctx, c.memRepo), addr.Branch) })
-	switch {
-	case err == plumbing.ErrReferenceNotFound:
-		must.NoError(ctx, c.memRepo.CreateBranch(&config.Branch{Name: string(addr.Branch)}))
-		SetHeadToBranch(ctx, c.memRepo, addr.Branch)
-		// must.NoError(ctx, Worktree(ctx, c.memRepo).Reset(&git.ResetOptions{Mode: git.HardReset}))
-	case err != nil:
-		must.NoError(ctx, err)
+	if !prefix {
+		// switch to or create branch
+		err := must.Try(func() { Checkout(ctx, Worktree(ctx, c.memRepo), addr.Branch) })
+		switch {
+		case err == plumbing.ErrReferenceNotFound:
+			must.NoError(ctx, c.memRepo.CreateBranch(&config.Branch{Name: string(addr.Branch)}))
+			SetHeadToBranch(ctx, c.memRepo, addr.Branch)
+			// must.NoError(ctx, Worktree(ctx, c.memRepo).Reset(&git.ResetOptions{Mode: git.HardReset}))
+		case err != nil:
+			must.NoError(ctx, err)
+		}
 	}
 
 	return c
@@ -81,6 +91,7 @@ func (x *MirrorCache) Clone(ctx context.Context, addr Address) Cloned {
 
 type clonedMirrorCache struct {
 	cache    *MirrorCache
+	prefix   bool
 	addr     Address
 	diskRepo *Repository
 	memRepo  *Repository
@@ -121,7 +132,14 @@ func (x *clonedMirrorCache) Pull(ctx context.Context) {
 
 // pull pulls only the branch explicitly named in the clone invocation.
 func (x *clonedMirrorCache) pull(ctx context.Context) {
-	refSpec := branchRefSpec(x.addr.Branch)
+	refSpec := clonePullRefSpecs(x.addr, x.prefix)
 	PullOnce(ctx, x.diskRepo, x.addr.Repo, refSpec)  // pull net into disk
 	PullOnce(ctx, x.memRepo, x.cachePath(), refSpec) // pull disk into memory
+}
+
+func clonePullRefSpecs(addr Address, prefix bool) []config.RefSpec {
+	if prefix {
+		return branchSubtreeRefSpec(addr.Branch)
+	}
+	return branchRefSpec(addr.Branch)
 }

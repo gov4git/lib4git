@@ -29,6 +29,13 @@ func Clone(ctx context.Context, addr Address) Cloned {
 	return GitClone(ctx, addr)
 }
 
+func ClonePrefix(ctx context.Context, prefix Address) Cloned {
+	if pxy := getProxy(); pxy != nil {
+		return pxy.ClonePrefix(ctx, prefix)
+	}
+	return GitClonePrefix(ctx, prefix)
+}
+
 func CloneOrInit(ctx context.Context, addr Address) Cloned {
 	if pxy := getProxy(); pxy != nil {
 		return pxy.Clone(ctx, addr)
