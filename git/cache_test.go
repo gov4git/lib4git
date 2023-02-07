@@ -37,7 +37,7 @@ func TestCache(t *testing.T) {
 	cloned1.Push(ctx)
 
 	cloned2 := cache.Clone(ctx, originAddr)
-	findNonce(ctx, cloned2.Repo(), "ok1")
+	findFile(ctx, cloned2.Repo(), "ok1")
 	populateNonce(ctx, cloned2.Repo(), "ok2")
 	cloned2.Tree().Checkout(&git.CheckoutOptions{
 		Branch: plumbing.NewBranchReferenceName(string(test2Branch)),
@@ -51,7 +51,7 @@ func TestCache(t *testing.T) {
 	cloned3.Push(ctx)
 
 	cloned4 := cache.Clone(ctx, Address{Repo: URL(originDir), Branch: test2Branch})
-	findNonce(ctx, cloned4.Repo(), "ok3")
+	findFile(ctx, cloned4.Repo(), "ok3")
 	populateNonce(ctx, cloned4.Repo(), "ok6")
 	cloned4.Push(ctx)
 
@@ -73,10 +73,10 @@ func populateNonce(ctx context.Context, r *git.Repository, nonce string) {
 	must.NoError(ctx, err)
 }
 
-func findNonce(ctx context.Context, r *git.Repository, nonce string) {
+func findFile(ctx context.Context, r *git.Repository, filepath string) {
 	w, err := r.Worktree()
 	must.NoError(ctx, err)
 
-	_, err = w.Filesystem.Stat(nonce)
+	_, err = w.Filesystem.Stat(filepath)
 	must.NoError(ctx, err)
 }

@@ -24,6 +24,10 @@ func (u URL) Hash() string {
 
 type Branch string
 
+func (b Branch) ReferenceName() plumbing.ReferenceName {
+	return plumbing.ReferenceName(plumbing.NewBranchReferenceName(string(b)))
+}
+
 func (b Branch) Sub(s string) Branch {
 	return Branch(filepath.Join(string(b), s))
 }
@@ -234,4 +238,9 @@ func Dump(ctx context.Context, r *Repository) {
 	for _, r := range Branches(ctx, r) {
 		fmt.Println("BRANCH:", r)
 	}
+}
+
+func UpdateBranch(ctx context.Context, repo *Repository, branch Branch, h plumbing.Hash) {
+	err := repo.Storer.SetReference(plumbing.NewHashReference(branch.ReferenceName(), h))
+	must.NoError(ctx, err)
 }

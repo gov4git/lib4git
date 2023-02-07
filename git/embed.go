@@ -15,9 +15,7 @@ import (
 	"github.com/gov4git/lib4git/ns"
 )
 
-// Embed creates a new commit on top of toBranch.
-// XXX: The HEAD is not updated!
-func Embed(
+func EmbedReset(
 	ctx context.Context,
 	repo *Repository,
 	addrs []Address, // remote branches to be embedded
@@ -27,6 +25,47 @@ func Embed(
 	allowOverride bool,
 	filter MergeFilter,
 ) {
+
+	EmbedOnBranch(ctx, repo, addrs, caches, toBranch, toNS, allowOverride, filter)
+
+	w, err := repo.Worktree()
+	must.NoError(ctx, err)
+	branchRef := Reference(ctx, repo, toBranch.ReferenceName(), true)
+	err = w.Reset(&git.ResetOptions{Commit: branchRef.Hash(), Mode: git.HardReset})
+	must.NoError(ctx, err)
+}
+
+func EmbedOnBranch(
+	ctx context.Context,
+	repo *Repository,
+	addrs []Address, // remote branches to be embedded
+	caches []Branch, // embedding cache branch name
+	toBranch Branch, // embed into branch
+	toNS []ns.NS, // namespace within into branch where each remote branch should be embedded
+	allowOverride bool,
+	filter MergeFilter,
+) plumbing.Hash {
+
+	branchRef := Reference(ctx, repo, toBranch.ReferenceName(), true)
+	parentCommit := GetCommit(ctx, repo, branchRef.Hash())
+	h := EmbedOnCommit(ctx, repo, addrs, caches, parentCommit, toNS, allowOverride, filter)
+	UpdateBranch(ctx, repo, toBranch, h)
+
+	return h
+}
+
+// Embed creates a new commit on top of another one.
+// The HEAD is not updated. The working tree is not updated.
+func EmbedOnCommit(
+	ctx context.Context,
+	repo *Repository,
+	addrs []Address, // remote branches to be embedded
+	caches []Branch, // embedding cache branch name
+	parentCommit *object.Commit,
+	toNS []ns.NS, // namespace within into branch where each remote branch should be embedded
+	allowOverride bool,
+	filter MergeFilter,
+) plumbing.Hash {
 
 	// fetch remotes
 	must.Assertf(ctx, len(toNS) == len(addrs), "namespaces and addresses must be same count")
@@ -42,10 +81,7 @@ func Embed(
 	embeddingsTreeHash := MergeTrees(ctx, repo, remoteTreeHashes, allowOverride, filter)
 
 	// merge embeddings into the toBranch tree
-	branchRefName := plumbing.NewBranchReferenceName(string(toBranch))
-	branchRef := Reference(ctx, repo, branchRefName, true)
-	branchCommit := GetCommit(ctx, repo, branchRef.Hash())
-	mergedTreeHash := mergeTrees(ctx, repo, ns.NS{}, branchCommit.TreeHash, embeddingsTreeHash, false, MergePassFilter)
+	mergedTreeHash := mergeTrees(ctx, repo, ns.NS{}, parentCommit.TreeHash, embeddingsTreeHash, false, MergePassFilter)
 
 	// create a commit
 	opts := git.CommitOptions{Author: GetAuthor()}
@@ -55,25 +91,22 @@ func Embed(
 		Committer:    *opts.Committer,
 		Message:      "embed remotes",
 		TreeHash:     mergedTreeHash,
-		ParentHashes: append([]plumbing.Hash{branchCommit.Hash}, remoteCommitHashes...),
+		ParentHashes: append([]plumbing.Hash{parentCommit.Hash}, remoteCommitHashes...),
 	}
 	commitObject := repo.Storer.NewEncodedObject()
 	must.NoError(ctx, commit.Encode(commitObject))
 	commitHash, err := repo.Storer.SetEncodedObject(commitObject)
 	must.NoError(ctx, err)
 
-	// update branch
-	err = repo.Storer.SetReference(plumbing.NewHashReference(branchRefName, commitHash))
-	must.NoError(ctx, err)
+	return commitHash
 }
 
 func fetchEmbedding(ctx context.Context, repo *Repository, addr Address, cache Branch) object.Commit {
 
 	// fetch remote branch using an ephemeral definition of the remote (not stored in the repo)
-	addrHash := addr.Hash()
 	nonce := "embedding-" + strconv.FormatUint(uint64(rand.Int63()), 36)
 	remoteBranchName := plumbing.NewBranchReferenceName(string(addr.Branch))
-	embeddedBranchName := plumbing.NewBranchReferenceName(string(cache.Sub(addrHash)))
+	embeddedBranchName := plumbing.NewBranchReferenceName(string(cache))
 	remote := git.NewRemote(
 		repo.Storer,
 		&config.RemoteConfig{
