@@ -15,7 +15,7 @@ import (
 	"github.com/gov4git/lib4git/ns"
 )
 
-func EmbedReset(
+func EmbedOnBranchReset(
 	ctx context.Context,
 	repo *Repository,
 	addrs []Address, // remote branches to be embedded
@@ -27,12 +27,7 @@ func EmbedReset(
 ) {
 
 	EmbedOnBranch(ctx, repo, addrs, caches, toBranch, toNS, allowOverride, filter)
-
-	w, err := repo.Worktree()
-	must.NoError(ctx, err)
-	branchRef := Reference(ctx, repo, toBranch.ReferenceName(), true)
-	err = w.Reset(&git.ResetOptions{Commit: branchRef.Hash(), Mode: git.HardReset})
-	must.NoError(ctx, err)
+	ResetToBranch(ctx, repo, toBranch)
 }
 
 func EmbedOnBranch(
@@ -46,11 +41,9 @@ func EmbedOnBranch(
 	filter MergeFilter,
 ) plumbing.Hash {
 
-	branchRef := Reference(ctx, repo, toBranch.ReferenceName(), true)
-	parentCommit := GetCommit(ctx, repo, branchRef.Hash())
+	parentCommit := ResolveBranch(ctx, repo, toBranch)
 	h := EmbedOnCommit(ctx, repo, addrs, caches, parentCommit, toNS, allowOverride, filter)
 	UpdateBranch(ctx, repo, toBranch, h)
-
 	return h
 }
 

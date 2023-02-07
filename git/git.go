@@ -9,6 +9,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/gov4git/lib4git/form"
@@ -240,7 +241,20 @@ func Dump(ctx context.Context, r *Repository) {
 	}
 }
 
+func ResolveBranch(ctx context.Context, repo *Repository, branch Branch) *object.Commit {
+	branchRef := Reference(ctx, repo, branch.ReferenceName(), true)
+	return GetCommit(ctx, repo, branchRef.Hash())
+}
+
 func UpdateBranch(ctx context.Context, repo *Repository, branch Branch, h plumbing.Hash) {
 	err := repo.Storer.SetReference(plumbing.NewHashReference(branch.ReferenceName(), h))
+	must.NoError(ctx, err)
+}
+
+func ResetToBranch(ctx context.Context, repo *Repository, branch Branch) {
+	w, err := repo.Worktree()
+	must.NoError(ctx, err)
+	branchRef := Reference(ctx, repo, branch.ReferenceName(), true)
+	err = w.Reset(&git.ResetOptions{Commit: branchRef.Hash(), Mode: git.HardReset})
 	must.NoError(ctx, err)
 }

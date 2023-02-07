@@ -28,7 +28,7 @@ func TestEmbed(t *testing.T) {
 	r3 := InitPlain(ctx, dir3, false)
 
 	embed := func() {
-		EmbedReset(
+		EmbedOnBranchReset(
 			ctx,
 			r1,
 			[]Address{
