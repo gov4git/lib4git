@@ -3,7 +3,7 @@ package git
 import (
 	"context"
 	"fmt"
-	"path"
+	"path/filepath"
 
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
@@ -24,6 +24,10 @@ func (u URL) Hash() string {
 
 type Branch string
 
+func (b Branch) Sub(s string) Branch {
+	return Branch(filepath.Join(string(b), s))
+}
+
 type CommitHash string
 
 const MainBranch Branch = "main"
@@ -36,11 +40,11 @@ type Address struct {
 }
 
 func (a Address) Sub(s string) Address {
-	return Address{Repo: a.Repo, Branch: Branch(path.Join(string(a.Branch), s))}
+	return Address{Repo: a.Repo, Branch: a.Branch.Sub(s)}
 }
 
 func (a Address) Join(s ns.NS) Address {
-	return Address{Repo: a.Repo, Branch: Branch(path.Join(string(a.Branch), s.Path()))}
+	return Address{Repo: a.Repo, Branch: a.Branch.Sub(s.Path())}
 }
 
 func (a Address) String() string {

@@ -3,7 +3,6 @@ package git
 import (
 	"context"
 	"math/rand"
-	"path/filepath"
 	"strconv"
 
 	"github.com/go-git/go-git/v5"
@@ -11,17 +10,22 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/filemode"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/gov4git/lib4git/base"
 	"github.com/gov4git/lib4git/must"
 	"github.com/gov4git/lib4git/ns"
 )
 
+// Embed creates a new commit on top of toBranch.
+// XXX: The HEAD is not updated!
 func Embed(
 	ctx context.Context,
 	repo *Repository,
-	addrs []Address,
-	toBranch Branch,
-	toNS []ns.NS,
+	addrs []Address, // remote branches to be embedded
+	caches []Branch, // embedding cache branch name
+	toBranch Branch, // embed into branch
+	toNS []ns.NS, // namespace within into branch where each remote branch should be embedded
 	allowOverride bool,
+	filter MergeFilter,
 ) {
 
 	// fetch remotes
@@ -29,19 +33,19 @@ func Embed(
 	remoteTreeHashes := make([]plumbing.Hash, len(addrs))
 	remoteCommitHashes := make([]plumbing.Hash, len(addrs))
 	for i := range addrs {
-		remoteCommit := fetchEmbedding(ctx, repo, addrs[i])
+		remoteCommit := fetchEmbedding(ctx, repo, addrs[i], caches[i])
 		remoteTreeHashes[i] = PrefixTree(ctx, repo, toNS[i], remoteCommit.TreeHash) // prefix with namespace
 		remoteCommitHashes[i] = remoteCommit.Hash
 	}
 
 	// create a common tree with all embeddings merged together
-	embeddingsTreeHash := MergeTrees(ctx, repo, remoteTreeHashes, allowOverride)
+	embeddingsTreeHash := MergeTrees(ctx, repo, remoteTreeHashes, allowOverride, filter)
 
 	// merge embeddings into the toBranch tree
 	branchRefName := plumbing.NewBranchReferenceName(string(toBranch))
 	branchRef := Reference(ctx, repo, branchRefName, true)
 	branchCommit := GetCommit(ctx, repo, branchRef.Hash())
-	mergedTreeHash := mergeTrees(ctx, repo, branchCommit.TreeHash, embeddingsTreeHash, allowOverride)
+	mergedTreeHash := mergeTrees(ctx, repo, ns.NS{}, branchCommit.TreeHash, embeddingsTreeHash, false, MergePassFilter)
 
 	// create a commit
 	opts := git.CommitOptions{Author: GetAuthor()}
@@ -63,13 +67,13 @@ func Embed(
 	must.NoError(ctx, err)
 }
 
-func fetchEmbedding(ctx context.Context, repo *Repository, addr Address) object.Commit {
+func fetchEmbedding(ctx context.Context, repo *Repository, addr Address, cache Branch) object.Commit {
 
 	// fetch remote branch using an ephemeral definition of the remote (not stored in the repo)
-	key := addr.Hash()
+	addrHash := addr.Hash()
 	nonce := "embedding-" + strconv.FormatUint(uint64(rand.Int63()), 36)
 	remoteBranchName := plumbing.NewBranchReferenceName(string(addr.Branch))
-	embeddedBranchName := plumbing.NewBranchReferenceName(filepath.Join("embedding", key))
+	embeddedBranchName := plumbing.NewBranchReferenceName(string(cache.Sub(addrHash)))
 	remote := git.NewRemote(
 		repo.Storer,
 		&config.RemoteConfig{
@@ -89,16 +93,23 @@ func fetchEmbedding(ctx context.Context, repo *Repository, addr Address) object.
 	return *commitObject
 }
 
+type MergeFilter func(ns.NS, object.TreeEntry) bool
+
+func MergePassFilter(fromNS ns.NS, fromEntry object.TreeEntry) bool {
+	return true
+}
+
 func MergeTrees(
 	ctx context.Context,
 	repo *Repository,
 	ths []plumbing.Hash,
 	allowOverride bool,
+	filter MergeFilter,
 ) plumbing.Hash {
 
 	aggregate := MakeTree(ctx, repo, object.Tree{})
 	for _, th := range ths {
-		aggregate = mergeTrees(ctx, repo, aggregate, th, allowOverride)
+		aggregate = mergeTrees(ctx, repo, ns.NS{}, aggregate, th, allowOverride, filter)
 	}
 	return aggregate
 }
@@ -106,9 +117,11 @@ func MergeTrees(
 func mergeTrees(
 	ctx context.Context,
 	repo *Repository,
+	ns ns.NS,
 	leftTH plumbing.Hash, // TH = TreeHash
 	rightTH plumbing.Hash,
 	allowOverride bool,
+	rightFilter MergeFilter,
 ) plumbing.Hash {
 
 	// get trees
@@ -123,27 +136,32 @@ func mergeTrees(
 		merged[left.Name] = left
 	}
 	for _, right := range rightTree.Entries {
+		if !rightFilter(ns, right) {
+			continue
+		}
 		if left, ok := merged[right.Name]; ok {
 			if left.Mode == filemode.Dir && right.Mode == filemode.Dir {
 				// merge directories
-				mergedLeftRightTH := mergeTrees(ctx, repo, left.Hash, right.Hash, allowOverride)
+				mergedLeftRightTH := mergeTrees(ctx, repo, ns.Sub(right.Name), left.Hash, right.Hash, allowOverride, rightFilter)
 				merged[right.Name] = object.TreeEntry{Name: right.Name, Mode: filemode.Dir, Hash: mergedLeftRightTH}
 			} else {
 				// right overrides left
-				must.Assertf(ctx, allowOverride, "not a mutually exclusive merge")
-				merged[right.Name] = right
+				if allowOverride {
+					merged[right.Name] = right
+				} else {
+					base.Infof("tree entry %v already exists", ns.Sub(right.Name))
+				}
 			}
 		} else {
 			merged[right.Name] = right
 		}
 	}
 
-	// rebuild tree
+	// make tree
 	entries := make([]object.TreeEntry, 0, len(merged))
 	for _, mergedEntry := range merged {
 		entries = append(entries, mergedEntry)
 	}
-
 	return MakeTree(ctx, repo, object.Tree{Entries: entries})
 }
 
@@ -156,6 +174,7 @@ func MakeTree(ctx context.Context, repo *Repository, tree object.Tree) plumbing.
 	return treeHash
 }
 
+// PrefixTree creates a git tree containing the tree th at path prefix.
 func PrefixTree(
 	ctx context.Context,
 	repo *Repository,

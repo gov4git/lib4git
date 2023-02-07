@@ -17,12 +17,13 @@ func TestEmbed(t *testing.T) {
 	base.LogVerbosely()
 	ctx := context.Background()
 	dir := t.TempDir()
+
 	dir1, dir2, dir3 := filepath.Join(dir, "1"), filepath.Join(dir, "2"), filepath.Join(dir, "3")
 	fmt.Println("r1=", dir1)
 	fmt.Println("r2=", dir2)
 	fmt.Println("r3=", dir3)
 
-	r1 := InitPlain(ctx, dir1, false)
+	r1 := InitPlain(ctx, dir1, false) // non-bare disk repo
 	r2 := InitPlain(ctx, dir2, false)
 	r3 := InitPlain(ctx, dir3, false)
 
@@ -30,33 +31,30 @@ func TestEmbed(t *testing.T) {
 	populate(ctx, r2, "ok2", true)
 	populate(ctx, r3, "ok3", true)
 
-	Embed(
-		ctx,
-		r1,
-		[]Address{
-			{Repo: URL(dir2), Branch: Branch(MainBranch)},
-			{Repo: URL(dir3), Branch: Branch(MainBranch)},
-		},
-		MainBranch,
-		[]ns.NS{{"x", "y", "z", "r2"}, {"x", "y", "z", "r3"}},
-		true,
-	)
+	embed := func() {
+		Embed(
+			ctx,
+			r1,
+			[]Address{
+				{Repo: URL(dir2), Branch: Branch(MainBranch)},
+				{Repo: URL(dir3), Branch: Branch(MainBranch)},
+			},
+			[]Branch{
+				"cache2",
+				"cache3",
+			},
+			MainBranch,
+			[]ns.NS{{"x", "y", "z", "r2"}, {"x", "y", "z", "r3"}},
+			true,
+			MergePassFilter,
+		)
+	}
 
+	embed()
 	populate(ctx, r1, "ha1", false)
 	populate(ctx, r2, "ha2", false)
 	populate(ctx, r3, "ha3", false)
-
-	Embed(
-		ctx,
-		r1,
-		[]Address{
-			{Repo: URL(dir2), Branch: Branch(MainBranch)},
-			{Repo: URL(dir3), Branch: Branch(MainBranch)},
-		},
-		MainBranch,
-		[]ns.NS{{"x", "y", "z", "r2"}, {"x", "y", "z", "r3"}},
-		true,
-	)
+	embed()
 
 	// TODO: add verification
 
