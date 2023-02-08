@@ -148,7 +148,7 @@ func cloneToMemory(ctx context.Context, addr Address) *Repository {
 		memfs.New(),
 		&git.CloneOptions{
 			URL:           string(addr.Repo),
-			Auth:          GetAuth(ctx, addr.Repo), // TODO: extract from context
+			Auth:          GetAuth(ctx, addr.Repo),
 			ReferenceName: plumbing.NewBranchReferenceName(string(addr.Branch)),
 		},
 	)
@@ -252,9 +252,8 @@ func UpdateBranch(ctx context.Context, repo *Repository, branch Branch, h plumbi
 }
 
 func ResetToBranch(ctx context.Context, repo *Repository, branch Branch) {
-	w, err := repo.Worktree()
-	must.NoError(ctx, err)
+	w := Worktree(ctx, repo)
 	branchRef := Reference(ctx, repo, branch.ReferenceName(), true)
-	err = w.Reset(&git.ResetOptions{Commit: branchRef.Hash(), Mode: git.HardReset})
+	err := w.Reset(&git.ResetOptions{Commit: branchRef.Hash(), Mode: git.HardReset})
 	must.NoError(ctx, err)
 }
