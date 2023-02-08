@@ -5,13 +5,9 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
-	"github.com/go-git/go-git/v5/plumbing/transport"
-	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/gov4git/lib4git/form"
 	"github.com/gov4git/lib4git/must"
 	"github.com/gov4git/lib4git/ns"
@@ -73,47 +69,6 @@ type RepoTree struct {
 	Tree *Tree
 }
 
-func initInMemory(ctx context.Context) *Repository {
-	repo, err := git.Init(memory.NewStorage(), memfs.New())
-	must.NoError(ctx, err)
-	return repo
-}
-
-func initOnDisk(ctx context.Context, dir string) *Repository {
-	return InitPlain(ctx, dir, false)
-}
-
-func openOrInitOnDisk(ctx context.Context, path URL) *Repository {
-	repo, err := git.PlainOpen(string(path))
-	if err == nil {
-		return repo
-	}
-	must.Assertf(ctx, err == git.ErrRepositoryNotExists, "%v", err)
-	return initOnDisk(ctx, string(path))
-}
-
-func cloneOrInit(ctx context.Context, addr Address) (*Repository, *Tree) {
-	repo, err := must.Try1(func() *Repository { return cloneToMemory(ctx, addr) })
-	if err == nil {
-		return repo, Worktree(ctx, repo)
-	}
-	_, isNoBranch := err.(git.NoMatchingRefSpecError)
-	if !isNoBranch && err != transport.ErrEmptyRemoteRepository {
-		must.Panic(ctx, err)
-	}
-	repo = initInMemory(ctx)
-
-	_, err = repo.CreateRemote(&config.RemoteConfig{Name: Origin, URLs: []string{string(addr.Repo)}})
-	must.NoError(ctx, err)
-
-	err = repo.CreateBranch(&config.Branch{Name: string(addr.Branch), Remote: Origin})
-	must.NoError(ctx, err)
-
-	ChangeDefaultBranch(ctx, repo, addr.Branch)
-
-	return repo, Worktree(ctx, repo)
-}
-
 func SetHeadToBranch(ctx context.Context, repo *Repository, branch Branch) {
 	branchName := plumbing.NewBranchReferenceName(string(branch))
 	h := plumbing.NewSymbolicReference(plumbing.HEAD, branchName)
@@ -139,21 +94,6 @@ func InitPlain(ctx context.Context, path string, isBare bool) *Repository {
 		must.Panic(ctx, err)
 	}
 	ChangeDefaultBranch(ctx, repo, MainBranch)
-	return repo
-}
-
-func cloneToMemory(ctx context.Context, addr Address) *Repository {
-	repo, err := git.CloneContext(ctx,
-		memory.NewStorage(),
-		memfs.New(),
-		&git.CloneOptions{
-			URL:           string(addr.Repo),
-			Auth:          GetAuth(ctx, addr.Repo),
-			ReferenceName: plumbing.NewBranchReferenceName(string(addr.Branch)),
-		},
-	)
-	must.NoError(ctx, err)
-
 	return repo
 }
 

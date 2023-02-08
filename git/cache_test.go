@@ -30,13 +30,13 @@ func TestCache(t *testing.T) {
 
 	// init origin and cache
 	InitPlain(ctx, originDir, true)
-	cache := NewMirrorCache(ctx, cacheDir)
+	cache := NewCache(ctx, cacheDir)
 
-	cloned1 := cache.Clone(ctx, originAddr)
+	cloned1 := cache.CloneOne(ctx, originAddr)
 	populateNonce(ctx, cloned1.Repo(), "ok1")
 	cloned1.Push(ctx)
 
-	cloned2 := cache.Clone(ctx, originAddr)
+	cloned2 := cache.CloneOne(ctx, originAddr)
 	findFile(ctx, cloned2.Repo(), "ok1")
 	populateNonce(ctx, cloned2.Repo(), "ok2")
 	cloned2.Tree().Checkout(&git.CheckoutOptions{
@@ -46,11 +46,11 @@ func TestCache(t *testing.T) {
 	populateNonce(ctx, cloned2.Repo(), "ok3")
 	cloned2.Push(ctx)
 
-	cloned3 := cache.Clone(ctx, Address{Repo: URL(originDir), Branch: test3Branch})
+	cloned3 := cache.CloneOne(ctx, Address{Repo: URL(originDir), Branch: test3Branch})
 	populateNonce(ctx, cloned3.Repo(), "ok5")
 	cloned3.Push(ctx)
 
-	cloned4 := cache.Clone(ctx, Address{Repo: URL(originDir), Branch: test2Branch})
+	cloned4 := cache.CloneOne(ctx, Address{Repo: URL(originDir), Branch: test2Branch})
 	findFile(ctx, cloned4.Repo(), "ok3")
 	populateNonce(ctx, cloned4.Repo(), "ok6")
 	cloned4.Push(ctx)

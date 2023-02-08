@@ -13,7 +13,7 @@ var (
 func UseCache(ctx context.Context, dir string) {
 	cacheLk.Lock()
 	defer cacheLk.Unlock()
-	proxy = NewMirrorCache(ctx, dir)
+	proxy = NewCache(ctx, dir)
 }
 
 func getProxy() Proxy {
@@ -22,23 +22,16 @@ func getProxy() Proxy {
 	return proxy
 }
 
-func Clone(ctx context.Context, addr Address) Cloned {
+func CloneOne(ctx context.Context, addr Address) Cloned {
 	if pxy := getProxy(); pxy != nil {
-		return pxy.Clone(ctx, addr)
+		return pxy.CloneOne(ctx, addr)
 	}
-	return GitClone(ctx, addr)
+	return cloneOneNoProxy(ctx, addr)
 }
 
-func ClonePrefix(ctx context.Context, prefix Address) Cloned {
+func CloneAll(ctx context.Context, addr Address) Cloned {
 	if pxy := getProxy(); pxy != nil {
-		return pxy.ClonePrefix(ctx, prefix)
+		return pxy.CloneAll(ctx, addr)
 	}
-	return GitClonePrefix(ctx, prefix)
-}
-
-func CloneOrInit(ctx context.Context, addr Address) Cloned {
-	if pxy := getProxy(); pxy != nil {
-		return pxy.Clone(ctx, addr)
-	}
-	return GitCloneOrInit(ctx, addr)
+	return cloneAllNoProxy(ctx, addr)
 }
