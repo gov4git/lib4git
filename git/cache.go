@@ -96,7 +96,7 @@ func openOrInitOnDisk(ctx context.Context, path URL) *Repository {
 		return repo
 	}
 	must.Assertf(ctx, err == git.ErrRepositoryNotExists, "%v", err)
-	return InitPlain(ctx, string(path), false)
+	return InitPlain(ctx, string(path), true) // cache must be bare, otherwise checkout branch cannot be pushed
 }
 
 type clonedCacheProxy struct {
