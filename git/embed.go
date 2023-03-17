@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"strconv"
 
@@ -41,7 +42,9 @@ func EmbedOnBranch(
 	filter MergeFilter,
 ) plumbing.Hash {
 
-	parentCommit := ResolveBranch(ctx, repo, toBranch)
+	fmt.Println("resolving ", toBranch)
+	parentCommit := ResolveCreateBranch(ctx, repo, toBranch)
+	fmt.Println("resolved ", toBranch)
 	h := EmbedOnCommit(ctx, repo, addrs, caches, parentCommit, toNS, allowOverride, filter)
 	UpdateBranch(ctx, repo, toBranch, h)
 	return h
@@ -77,21 +80,8 @@ func EmbedOnCommit(
 	mergedTreeHash := mergeTrees(ctx, repo, ns.NS{}, parentCommit.TreeHash, embeddingsTreeHash, false, MergePassFilter)
 
 	// create a commit
-	opts := git.CommitOptions{Author: GetAuthor()}
-	must.NoError(ctx, opts.Validate(repo))
-	commit := object.Commit{
-		Author:       *opts.Author,
-		Committer:    *opts.Committer,
-		Message:      "embed remotes",
-		TreeHash:     mergedTreeHash,
-		ParentHashes: append([]plumbing.Hash{parentCommit.Hash}, remoteCommitHashes...),
-	}
-	commitObject := repo.Storer.NewEncodedObject()
-	must.NoError(ctx, commit.Encode(commitObject))
-	commitHash, err := repo.Storer.SetEncodedObject(commitObject)
-	must.NoError(ctx, err)
-
-	return commitHash
+	parents := append([]plumbing.Hash{parentCommit.Hash}, remoteCommitHashes...)
+	return CreateCommit(ctx, repo, "embed remotes", mergedTreeHash, parents)
 }
 
 func fetchEmbedding(ctx context.Context, repo *Repository, addr Address, cache Branch) object.Commit {
@@ -189,43 +179,4 @@ func mergeTrees(
 		entries = append(entries, mergedEntry)
 	}
 	return MakeTree(ctx, repo, object.Tree{Entries: entries})
-}
-
-func MakeTree(ctx context.Context, repo *Repository, tree object.Tree) plumbing.Hash {
-	treeObject := repo.Storer.NewEncodedObject()
-	err := tree.Encode(treeObject)
-	must.NoError(ctx, err)
-	treeHash, err := repo.Storer.SetEncodedObject(treeObject)
-	must.NoError(ctx, err)
-	return treeHash
-}
-
-// PrefixTree creates a git tree containing the tree th at path prefix.
-func PrefixTree(
-	ctx context.Context,
-	repo *Repository,
-	prefix ns.NS,
-	th plumbing.Hash,
-) plumbing.Hash {
-
-	if len(prefix) == 0 {
-		return th
-	}
-
-	mergedTree := object.Tree{
-		Entries: []object.TreeEntry{
-			{
-				Name: prefix[0],
-				Mode: filemode.Dir,
-				Hash: PrefixTree(ctx, repo, prefix[1:], th),
-			},
-		},
-	}
-	treeObject := repo.Storer.NewEncodedObject()
-	err := mergedTree.Encode(treeObject)
-	must.NoError(ctx, err)
-	prefixedTreeHash, err := repo.Storer.SetEncodedObject(treeObject)
-	must.NoError(ctx, err)
-
-	return prefixedTreeHash
 }

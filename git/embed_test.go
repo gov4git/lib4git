@@ -13,6 +13,8 @@ import (
 	"github.com/gov4git/lib4git/ns"
 )
 
+const testEmbedBranch Branch = "brew"
+
 func TestEmbed(t *testing.T) {
 	base.LogVerbosely()
 	ctx := context.Background()
@@ -32,14 +34,14 @@ func TestEmbed(t *testing.T) {
 			ctx,
 			r1,
 			[]Address{
-				{Repo: URL(dir2), Branch: Branch(MainBranch)},
-				{Repo: URL(dir3), Branch: Branch(MainBranch)},
+				{Repo: URL(dir2), Branch: Branch(testEmbedBranch)},
+				{Repo: URL(dir3), Branch: Branch(testEmbedBranch)},
 			},
 			[]Branch{
 				"cache2",
 				"cache3",
 			},
-			MainBranch,
+			testEmbedBranch,
 			[]ns.NS{{"embedded", "r2"}, {"embedded", "r3"}},
 			true,
 			MergePassFilter,
@@ -67,8 +69,8 @@ func populate(ctx context.Context, r *git.Repository, nonce string) {
 	w, err := r.Worktree()
 	must.NoError(ctx, err)
 
-	// point head to MainBranch
-	branch := plumbing.NewBranchReferenceName(string(MainBranch))
+	// point head to testEmbedBranch
+	branch := plumbing.NewBranchReferenceName(string(testEmbedBranch))
 	h := plumbing.NewSymbolicReference(plumbing.HEAD, branch)
 	err = r.Storer.SetReference(h)
 	must.NoError(ctx, err)
