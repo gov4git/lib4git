@@ -39,6 +39,10 @@ func (x LocalAddress) String() string {
 
 func NewLocalAddress(ctx context.Context, t *testing.T, branch git.Branch, isBare bool) LocalAddress {
 	dir := filepath.Join(t.TempDir(), UniqueString(ctx))
+	return NewLocalAddressDir(ctx, t, dir, branch, isBare)
+}
+
+func NewLocalAddressDir(ctx context.Context, t *testing.T, dir string, branch git.Branch, isBare bool) LocalAddress {
 	repo := git.InitPlain(ctx, dir, isBare)
 	addr := git.NewAddress(git.URL(dir), branch)
 	var tree *git.Tree

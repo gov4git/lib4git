@@ -21,6 +21,8 @@ func IsVerbose() bool {
 
 func newQuietConfig() zap.Config {
 	cfg := zap.NewProductionConfig()
+	cfg.Encoding = "console"
+	// cfg.DisableStacktrace = true
 	cfg.Level = zap.NewAtomicLevelAt(zap.WarnLevel)
 	return cfg
 }

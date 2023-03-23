@@ -97,12 +97,14 @@ func (x *clonedNoProxy) Push(ctx context.Context) {
 }
 
 func (x *clonedNoProxy) Pull(ctx context.Context) {
-	if err := x.repo.FetchContext(ctx, &git.FetchOptions{
+	err := x.repo.FetchContext(ctx, &git.FetchOptions{
 		RefSpecs: clonePullRefSpecs(x.addr, x.all),
 		Auth:     GetAuth(ctx, x.addr.Repo),
-	}); err != nil {
-		must.Panic(ctx, err)
+	})
+	if err == transport.ErrEmptyRemoteRepository {
+		return
 	}
+	must.NoError(ctx, err)
 }
 
 func (x *clonedNoProxy) Repo() *Repository {
