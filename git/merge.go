@@ -42,8 +42,8 @@ func mergeTrees(
 ) plumbing.Hash {
 
 	// get trees
-	leftTree := GetTree(ctx, repo.Storer, leftTH)
-	rightTree := GetTree(ctx, repo.Storer, rightTH)
+	leftTree := GetTree(ctx, repo, leftTH)
+	rightTree := GetTree(ctx, repo, rightTH)
 
 	// merge tree entries
 	merged := map[string]object.TreeEntry{}
