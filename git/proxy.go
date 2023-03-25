@@ -44,7 +44,7 @@ func cloneToMemoryOrInit(ctx context.Context, addr Address) *Repository {
 		return repo
 	}
 	_, isNoBranch := err.(git.NoMatchingRefSpecError)
-	if !isNoBranch && err != transport.ErrEmptyRemoteRepository {
+	if !isNoBranch && err != transport.ErrEmptyRemoteRepository && err != plumbing.ErrReferenceNotFound {
 		must.Panic(ctx, err)
 	}
 	repo = initInMemory(ctx)

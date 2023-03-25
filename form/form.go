@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"os"
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/gov4git/lib4git/must"
@@ -41,7 +40,7 @@ func DecodeBytes[F Form](ctx context.Context, data []byte) (form F, err error) {
 }
 
 func EncodeToFile[F Form](ctx context.Context, fs billy.Filesystem, path string, form F) error {
-	file, err := fs.OpenFile(path, os.O_CREATE|os.O_RDWR, 0644)
+	file, err := fs.Create(path)
 	if err != nil {
 		return err
 	}
