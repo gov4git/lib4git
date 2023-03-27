@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"strconv"
 
@@ -60,26 +61,34 @@ func EmbedOnCommit(
 
 	// fetch remotes
 	must.Assertf(ctx, len(toNS) == len(addrs), "namespaces and addresses must be same count")
-	remoteTreeHashes := make([]plumbing.Hash, len(addrs))
-	remoteCommitHashes := make([]plumbing.Hash, len(addrs))
+	remoteTreeHashes := []plumbing.Hash{}
+	remoteCommitHashes := []plumbing.Hash{}
 	for i := range addrs {
 		remoteCommit := fetchEmbedding(ctx, repo, addrs[i], caches[i])
-		remoteTreeHashes[i] = PrefixTree(ctx, repo, toNS[i], remoteCommit.TreeHash) // prefix with namespace
-		remoteCommitHashes[i] = remoteCommit.Hash
+		if remoteCommit == nil {
+			fmt.Println("skipping empty repo", addrs[i])
+			continue
+		}
+		fmt.Println("syncing", addrs[i])
+		t := PrefixTree(ctx, repo, toNS[i], remoteCommit.TreeHash) // prefix with namespace
+		remoteTreeHashes = append(remoteTreeHashes, t)
+		remoteCommitHashes = append(remoteCommitHashes, remoteCommit.Hash)
 	}
 
 	// create a common tree with all embeddings merged together
 	embeddingsTreeHash := MergeTrees(ctx, repo, remoteTreeHashes, allowOverride, filter)
 
 	// merge embeddings into the toBranch tree
+	// XXX: check if merge produced changes
 	mergedTreeHash := mergeTrees(ctx, repo, ns.NS{}, parentCommit.TreeHash, embeddingsTreeHash, false, MergePassFilter)
 
 	// create a commit
 	parents := append([]plumbing.Hash{parentCommit.Hash}, remoteCommitHashes...)
-	return CreateCommit(ctx, repo, "embed remotes", mergedTreeHash, parents)
+	ch := CreateCommit(ctx, repo, "embed remotes", mergedTreeHash, parents)
+	return ch
 }
 
-func fetchEmbedding(ctx context.Context, repo *Repository, addr Address, cache Branch) object.Commit {
+func fetchEmbedding(ctx context.Context, repo *Repository, addr Address, cache Branch) *object.Commit {
 
 	// fetch remote branch using an ephemeral definition of the remote (not stored in the repo)
 	nonce := "embedding-" + strconv.FormatUint(uint64(rand.Int63()), 36)
@@ -95,11 +104,20 @@ func fetchEmbedding(ctx context.Context, repo *Repository, addr Address, cache B
 			},
 		},
 	)
-	must.NoError(ctx, remote.FetchContext(ctx, &git.FetchOptions{RemoteName: nonce}))
+	err := remote.FetchContext(ctx, &git.FetchOptions{RemoteName: nonce})
+	if err != nil {
+		if !IsAlreadyUpToDate(err) && !IsRemoteRepoIsEmpty(err) {
+			must.NoError(ctx, err)
+		}
+	}
 
 	// get the latest commit on remote branch
-	commitHash := Reference(ctx, repo, embeddedBranchName, true)
+	commitHash, err := repo.Reference(embeddedBranchName, true)
+	if err == plumbing.ErrReferenceNotFound {
+		return nil
+	}
+	must.NoError(ctx, err)
 	commitObject := GetCommit(ctx, repo, commitHash.Hash())
 
-	return *commitObject
+	return commitObject
 }

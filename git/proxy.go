@@ -100,6 +100,7 @@ func (x *clonedNoProxy) Pull(ctx context.Context) {
 	err := x.repo.FetchContext(ctx, &git.FetchOptions{
 		RefSpecs: clonePullRefSpecs(x.addr, x.all),
 		Auth:     GetAuth(ctx, x.addr.Repo),
+		Force:    true,
 	})
 	if err == transport.ErrEmptyRemoteRepository {
 		return

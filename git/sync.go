@@ -66,15 +66,21 @@ func overwriteRemote(ctx context.Context, repo *Repository, to URL, refspecs []c
 // If the remote exists, it is overwritten.
 func Push(ctx context.Context, repo *Repository, to URL, refspecs []config.RefSpec) {
 	remote, remoteName := overwriteRemote(ctx, repo, to, refspecs)
-	must.NoError(ctx, remote.PushContext(ctx, &git.PushOptions{RemoteName: remoteName, Auth: GetAuth(ctx, to)}))
+	must.NoError(ctx, remote.PushContext(ctx, &git.PushOptions{
+		RemoteName: remoteName,
+		Auth:       GetAuth(ctx, to),
+	}))
 }
 
 // Push implements `git pull`. It creates a remote, whose name is the hash of the remote repo's URL.
 // If the remote exists, it is overwritten.
 func Pull(ctx context.Context, repo *Repository, from URL, refspecs []config.RefSpec) {
 	remote, remoteName := overwriteRemote(ctx, repo, from, refspecs)
-	must.NoError(ctx, remote.FetchContext(ctx, &git.FetchOptions{RemoteName: remoteName, Auth: GetAuth(ctx, from)}))
-	err := remote.FetchContext(ctx, &git.FetchOptions{RemoteName: remoteName, Auth: GetAuth(ctx, from)})
+	err := remote.FetchContext(ctx, &git.FetchOptions{
+		RemoteName: remoteName,
+		Auth:       GetAuth(ctx, from),
+		Force:      true,
+	})
 	must.Assertf(ctx,
 		err == transport.ErrEmptyRemoteRepository ||
 			err == git.NoErrAlreadyUpToDate ||
@@ -92,7 +98,10 @@ func PushOnce(ctx context.Context, repo *Repository, to URL, refspecs []config.R
 			Fetch: refspecs,
 		},
 	)
-	must.NoError(ctx, remote.PushContext(ctx, &git.PushOptions{RemoteName: nonce, Auth: GetAuth(ctx, to)}))
+	must.NoError(ctx, remote.PushContext(ctx, &git.PushOptions{
+		RemoteName: nonce,
+		Auth:       GetAuth(ctx, to),
+	}))
 }
 
 // PullOnce implements `git pull` without creating a new remote entry.
@@ -106,7 +115,11 @@ func PullOnce(ctx context.Context, repo *Repository, from URL, refspecs []config
 			Fetch: refspecs,
 		},
 	)
-	err := remote.FetchContext(ctx, &git.FetchOptions{RemoteName: nonce, Auth: GetAuth(ctx, from)})
+	err := remote.FetchContext(ctx, &git.FetchOptions{
+		RemoteName: nonce,
+		Auth:       GetAuth(ctx, from),
+		Force:      true,
+	})
 	_, isNoMatchingRefSpec := err.(git.NoMatchingRefSpecError)
 	must.Assertf(ctx,
 		err == transport.ErrEmptyRemoteRepository ||

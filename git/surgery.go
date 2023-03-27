@@ -39,14 +39,15 @@ func CreateCommit(
 	opts := git.CommitOptions{Author: GetAuthor()}
 	must.NoError(ctx, opts.Validate(repo))
 	commit := object.Commit{
-		Author:       *opts.Author,
-		Committer:    *opts.Committer,
+		Author: *opts.Author,
+		// Committer:    *opts.Committer,
 		Message:      msg,
 		TreeHash:     treeHash,
 		ParentHashes: parents,
 	}
 	commitObject := repo.Storer.NewEncodedObject()
-	must.NoError(ctx, commit.Encode(commitObject))
+	err := commit.Encode(commitObject)
+	must.NoError(ctx, err)
 	commitHash, err := repo.Storer.SetEncodedObject(commitObject)
 	must.NoError(ctx, err)
 	return commitHash
