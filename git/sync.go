@@ -98,10 +98,14 @@ func PushOnce(ctx context.Context, repo *Repository, to URL, refspecs []config.R
 			Fetch: refspecs,
 		},
 	)
-	must.NoError(ctx, remote.PushContext(ctx, &git.PushOptions{
+	err := remote.PushContext(ctx, &git.PushOptions{
 		RemoteName: nonce,
 		Auth:       GetAuth(ctx, to),
-	}))
+	})
+	if IsAlreadyUpToDate(err) {
+		return
+	}
+	must.NoError(ctx, err)
 }
 
 // PullOnce implements `git pull` without creating a new remote entry.
