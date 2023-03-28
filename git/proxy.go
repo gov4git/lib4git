@@ -88,12 +88,14 @@ type clonedNoProxy struct {
 }
 
 func (x *clonedNoProxy) Push(ctx context.Context) {
-	if err := x.repo.PushContext(ctx, &git.PushOptions{
+	err := x.repo.PushContext(ctx, &git.PushOptions{
 		RefSpecs: mirrorRefSpecs,
 		Auth:     GetAuth(ctx, x.addr.Repo),
-	}); err != nil {
-		must.Panic(ctx, err)
+	})
+	if IsAlreadyUpToDate(err) {
+		return
 	}
+	must.NoError(ctx, err)
 }
 
 func (x *clonedNoProxy) Pull(ctx context.Context) {

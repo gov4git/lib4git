@@ -104,7 +104,10 @@ func fetchEmbedding(ctx context.Context, repo *Repository, addr Address, cache B
 			},
 		},
 	)
-	err := remote.FetchContext(ctx, &git.FetchOptions{RemoteName: nonce})
+	err := remote.FetchContext(ctx, &git.FetchOptions{
+		RemoteName: nonce,
+		Auth:       GetAuth(ctx, addr.Repo),
+	})
 	if err != nil {
 		if !IsAlreadyUpToDate(err) && !IsRemoteRepoIsEmpty(err) {
 			must.NoError(ctx, err)
