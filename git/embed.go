@@ -42,7 +42,9 @@ func EmbedOnBranch(
 
 	parentCommit := ResolveCreateBranch(ctx, repo, toBranch)
 	h := EmbedOnCommit(ctx, repo, addrs, caches, parentCommit, toNS, allowOverride, filter)
-	UpdateBranch(ctx, repo, toBranch, h)
+	if !h.IsZero() {
+		UpdateBranch(ctx, repo, toBranch, h)
+	}
 	return h
 }
 

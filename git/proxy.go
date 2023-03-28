@@ -88,26 +88,11 @@ type clonedNoProxy struct {
 }
 
 func (x *clonedNoProxy) Push(ctx context.Context) {
-	err := x.repo.PushContext(ctx, &git.PushOptions{
-		RefSpecs: mirrorRefSpecs,
-		Auth:     GetAuth(ctx, x.addr.Repo),
-	})
-	if IsAlreadyUpToDate(err) {
-		return
-	}
-	must.NoError(ctx, err)
+	PushOnce(ctx, x.repo, x.addr.Repo, mirrorRefSpecs)
 }
 
 func (x *clonedNoProxy) Pull(ctx context.Context) {
-	err := x.repo.FetchContext(ctx, &git.FetchOptions{
-		RefSpecs: clonePullRefSpecs(x.addr, x.all),
-		Auth:     GetAuth(ctx, x.addr.Repo),
-		Force:    true,
-	})
-	if err == transport.ErrEmptyRemoteRepository {
-		return
-	}
-	must.NoError(ctx, err)
+	PullOnce(ctx, x.repo, x.addr.Repo, clonePullRefSpecs(x.addr, x.all))
 }
 
 func (x *clonedNoProxy) Repo() *Repository {
