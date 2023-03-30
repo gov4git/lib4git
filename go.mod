@@ -6,6 +6,7 @@ require (
 	github.com/go-git/go-billy/v5 v5.4.1
 	github.com/go-git/go-git/v5 v5.6.1
 	github.com/gofrs/flock v0.8.1
+	github.com/google/uuid v1.3.0
 	github.com/whilp/git-urls v1.0.0
 	go.uber.org/zap v1.24.0
 )

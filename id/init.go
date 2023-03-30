@@ -3,7 +3,6 @@ package id
 import (
 	"context"
 
-	"github.com/gov4git/gov4git/proto"
 	"github.com/gov4git/lib4git/git"
 	"github.com/gov4git/lib4git/must"
 )
@@ -28,8 +27,8 @@ func InitLocal(
 
 	privChg := initPrivateStageOnly(ctx, ownerCloned.Private.Tree(), ownerAddr)
 	pubChg := initPublicStageOnly(ctx, ownerCloned.Public.Tree(), privChg.Result.PublicCredentials)
-	proto.Commit(ctx, ownerCloned.Private.Tree(), privChg.Msg)
-	proto.Commit(ctx, ownerCloned.Public.Tree(), pubChg.Msg)
+	git.Commit(ctx, ownerCloned.Private.Tree(), privChg.Msg)
+	git.Commit(ctx, ownerCloned.Public.Tree(), pubChg.Msg)
 	return privChg
 }
 
