@@ -16,11 +16,18 @@ func nonceName() string {
 	return "nonce-" + strconv.FormatUint(uint64(rand.Int63()), 36)
 }
 
-const mirrorBranchesRefSpec = "refs/heads/*:refs/heads/*"
-const mirrorTagsRefSpec = "refs/tags/*:refs/tags/*"
-const mirrorHeadRefSpec = "refs/HEAD:refs/HEAD"
+const (
+	mirrorBranchesRefSpec = "refs/heads/*:refs/heads/*"
+	mirrorRemotesRefSpec  = "refs/remotes/*:refs/remotes/*"
+	mirrorTagsRefSpec     = "refs/tags/*:refs/tags/*"
+	mirrorHeadRefSpec     = "refs/HEAD:refs/HEAD"
+)
 
-var mirrorRefSpecs = []config.RefSpec{mirrorBranchesRefSpec /*, mirrorTagsRefSpec, mirrorHeadRefSpec*/}
+var mirrorRefSpecs = []config.RefSpec{
+	mirrorBranchesRefSpec,
+	// mirrorRemotesRefSpec,
+	// mirrorTagsRefSpec, mirrorHeadRefSpec,
+}
 
 func branchRefSpec(b Branch) []config.RefSpec {
 	return []config.RefSpec{

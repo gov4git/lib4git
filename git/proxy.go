@@ -5,9 +5,6 @@ import (
 
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/config"
-	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/gov4git/lib4git/must"
 )
@@ -28,78 +25,8 @@ type Cloned interface {
 	Tree() *Tree
 }
 
-func cloneOneNoProxy(ctx context.Context, addr Address) Cloned {
-	return &clonedNoProxy{all: false, addr: addr, repo: cloneToMemoryOrInit(ctx, addr)}
-}
-
-func cloneAllNoProxy(ctx context.Context, addr Address) Cloned {
-	c := &clonedNoProxy{all: true, addr: addr, repo: cloneToMemoryOrInit(ctx, addr)}
-	c.Pull(ctx)
-	return c
-}
-
-func cloneToMemoryOrInit(ctx context.Context, addr Address) *Repository {
-	repo, err := must.Try1(func() *Repository { return cloneToMemory(ctx, addr) })
-	if err == nil {
-		return repo
-	}
-	_, isNoBranch := err.(git.NoMatchingRefSpecError)
-	if !isNoBranch && err != transport.ErrEmptyRemoteRepository && err != plumbing.ErrReferenceNotFound {
-		must.Panic(ctx, err)
-	}
-	repo = initInMemory(ctx)
-
-	_, err = repo.CreateRemote(&config.RemoteConfig{Name: Origin, URLs: []string{string(addr.Repo)}})
-	must.NoError(ctx, err)
-
-	err = repo.CreateBranch(&config.Branch{Name: string(addr.Branch), Remote: Origin})
-	must.NoError(ctx, err)
-
-	ChangeDefaultBranch(ctx, repo, addr.Branch)
-
-	return repo
-}
-
 func initInMemory(ctx context.Context) *Repository {
 	repo, err := git.Init(memory.NewStorage(), memfs.New())
 	must.NoError(ctx, err)
 	return repo
-}
-
-func cloneToMemory(ctx context.Context, addr Address) *Repository {
-	repo, err := git.CloneContext(ctx,
-		memory.NewStorage(),
-		memfs.New(),
-		&git.CloneOptions{
-			URL:           string(addr.Repo),
-			Auth:          GetAuth(ctx, addr.Repo),
-			ReferenceName: plumbing.NewBranchReferenceName(string(addr.Branch)),
-		},
-	)
-	must.NoError(ctx, err)
-
-	return repo
-}
-
-type clonedNoProxy struct {
-	all  bool
-	addr Address
-	repo *Repository
-}
-
-func (x *clonedNoProxy) Push(ctx context.Context) {
-	PushOnce(ctx, x.repo, x.addr.Repo, mirrorRefSpecs)
-}
-
-func (x *clonedNoProxy) Pull(ctx context.Context) {
-	PullOnce(ctx, x.repo, x.addr.Repo, clonePullRefSpecs(x.addr, x.all))
-}
-
-func (x *clonedNoProxy) Repo() *Repository {
-	return x.repo
-}
-
-func (x *clonedNoProxy) Tree() *Tree {
-	t, _ := x.Repo().Worktree()
-	return t
 }

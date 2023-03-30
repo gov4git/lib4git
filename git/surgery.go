@@ -36,11 +36,15 @@ func CreateCommit(
 	parents []plumbing.Hash,
 ) plumbing.Hash {
 
-	opts := git.CommitOptions{Author: GetAuthor()}
+	opts := git.CommitOptions{
+		All:               true,
+		AllowEmptyCommits: true,
+		Author:            GetAuthor(),
+	}
 	must.NoError(ctx, opts.Validate(repo))
 	commit := object.Commit{
-		Author: *opts.Author,
-		// Committer:    *opts.Committer,
+		Author:       *opts.Author,
+		Committer:    *opts.Author,
 		Message:      msg,
 		TreeHash:     treeHash,
 		ParentHashes: parents,

@@ -71,32 +71,33 @@ func (x *Cache) clone(ctx context.Context, addr Address, all bool) Cloned {
 		all:      all,
 		cache:    x,
 		addr:     addr,
-		diskRepo: openOrInitOnDisk(ctx, x.urlCachePath(addr.Repo)),
+		diskRepo: openOrInitOnDisk(ctx, x.urlCachePath(addr.Repo), true), // cache must be bare, otherwise checkout branch cannot be pushed
 		memRepo:  initInMemory(ctx),
 	}
 	c.pull(ctx)
-
-	// switch to or create branch
-	err := must.Try(func() { Checkout(ctx, Worktree(ctx, c.memRepo), addr.Branch) })
-	switch {
-	case err == plumbing.ErrReferenceNotFound:
-		must.NoError(ctx, c.memRepo.CreateBranch(&config.Branch{Name: string(addr.Branch)}))
-		SetHeadToBranch(ctx, c.memRepo, addr.Branch)
-		// must.NoError(ctx, Worktree(ctx, c.memRepo).Reset(&git.ResetOptions{Mode: git.HardReset}))
-	case err != nil:
-		must.NoError(ctx, err)
-	}
-
+	switchToBranch(ctx, c.memRepo, addr.Branch)
 	return c
 }
 
-func openOrInitOnDisk(ctx context.Context, path URL) *Repository {
+func switchToBranch(ctx context.Context, repo *Repository, branch Branch) {
+	err := must.Try(func() { Checkout(ctx, Worktree(ctx, repo), branch) })
+	switch {
+	case err == plumbing.ErrReferenceNotFound:
+		must.NoError(ctx, repo.CreateBranch(&config.Branch{Name: string(branch)}))
+		SetHeadToBranch(ctx, repo, branch)
+		// must.NoError(ctx, Worktree(ctx, repo).Reset(&git.ResetOptions{Mode: git.HardReset}))
+	case err != nil:
+		must.NoError(ctx, err)
+	}
+}
+
+func openOrInitOnDisk(ctx context.Context, path URL, bare bool) *Repository {
 	repo, err := git.PlainOpen(string(path))
 	if err == nil {
 		return repo
 	}
 	must.Assertf(ctx, err == git.ErrRepositoryNotExists, "%v", err)
-	return InitPlain(ctx, string(path), true) // cache must be bare, otherwise checkout branch cannot be pushed
+	return InitPlain(ctx, string(path), bare)
 }
 
 type clonedCacheProxy struct {

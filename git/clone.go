@@ -16,6 +16,12 @@ func UseCache(ctx context.Context, dir string) {
 	proxy = NewCache(ctx, dir)
 }
 
+func UseNoCacheOnDisk(ctx context.Context, dir string) {
+	cacheLk.Lock()
+	defer cacheLk.Unlock()
+	proxy = NewNoCacheOnDisk(dir)
+}
+
 func getProxy() Proxy {
 	cacheLk.Lock()
 	defer cacheLk.Unlock()
@@ -26,12 +32,12 @@ func CloneOne(ctx context.Context, addr Address) Cloned {
 	if pxy := getProxy(); pxy != nil {
 		return pxy.CloneOne(ctx, addr)
 	}
-	return cloneOneNoProxy(ctx, addr)
+	return NoCache{}.CloneOne(ctx, addr)
 }
 
 func CloneAll(ctx context.Context, addr Address) Cloned {
 	if pxy := getProxy(); pxy != nil {
 		return pxy.CloneAll(ctx, addr)
 	}
-	return cloneAllNoProxy(ctx, addr)
+	return NoCache{}.CloneAll(ctx, addr)
 }

@@ -81,7 +81,7 @@ func EmbedOnCommit(
 	embeddingsTreeHash := MergeTrees(ctx, repo, remoteTreeHashes, allowOverride, filter)
 
 	// merge embeddings into the toBranch tree
-	// XXX: check if merge produced changes
+	// XXX: check if merge produced changes, don't commit if it didn't
 	mergedTreeHash := mergeTrees(ctx, repo, ns.NS{}, parentCommit.TreeHash, embeddingsTreeHash, false, MergePassFilter)
 
 	// create a commit

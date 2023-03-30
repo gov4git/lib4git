@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"sort"
 
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/filemode"
@@ -73,9 +74,24 @@ func mergeTrees(
 	}
 
 	// make tree
-	entries := make([]object.TreeEntry, 0, len(merged))
+	entries := make(TreeEntries, 0, len(merged))
 	for _, mergedEntry := range merged {
 		entries = append(entries, mergedEntry)
 	}
+	sort.Sort(entries)
 	return MakeTree(ctx, repo, object.Tree{Entries: entries})
+}
+
+type TreeEntries []object.TreeEntry
+
+func (x TreeEntries) Len() int {
+	return len(x)
+}
+
+func (x TreeEntries) Less(i, j int) bool {
+	return x[i].Name < x[j].Name
+}
+
+func (x TreeEntries) Swap(i, j int) {
+	x[i], x[j] = x[j], x[i]
 }
