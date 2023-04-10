@@ -66,9 +66,9 @@ func EmbedOnCommit(
 	remoteTreeHashes := []plumbing.Hash{}
 	remoteCommitHashes := []plumbing.Hash{}
 	for i := range addrs {
-		remoteCommit := fetchEmbedding(ctx, repo, addrs[i], caches[i])
-		if remoteCommit == nil {
-			fmt.Println("skipping empty repo", addrs[i])
+		remoteCommit, err := fetchEmbedding(ctx, repo, addrs[i], caches[i])
+		if err != nil {
+			fmt.Printf("skipping empty or inaccessible repo %v (%v)\n", addrs[i], err)
 			continue
 		}
 		fmt.Println("syncing", addrs[i])
@@ -90,7 +90,7 @@ func EmbedOnCommit(
 	return ch
 }
 
-func fetchEmbedding(ctx context.Context, repo *Repository, addr Address, cache Branch) *object.Commit {
+func fetchEmbedding(ctx context.Context, repo *Repository, addr Address, cache Branch) (*object.Commit, error) {
 
 	// fetch remote branch using an ephemeral definition of the remote (not stored in the repo)
 	nonce := "embedding-" + strconv.FormatUint(uint64(rand.Int63()), 36)
@@ -110,19 +110,21 @@ func fetchEmbedding(ctx context.Context, repo *Repository, addr Address, cache B
 		RemoteName: nonce,
 		Auth:       GetAuth(ctx, addr.Repo),
 	})
-	if err != nil {
-		if !IsAlreadyUpToDate(err) && !IsRemoteRepoIsEmpty(err) {
-			must.NoError(ctx, err)
-		}
+	if IsRepoIsInaccessible(err) {
+		return nil, err
 	}
+	if IsAlreadyUpToDate(err) || IsRemoteRepoIsEmpty(err) {
+		return nil, err
+	}
+	must.NoError(ctx, err)
 
 	// get the latest commit on remote branch
 	commitHash, err := repo.Reference(embeddedBranchName, true)
-	if err == plumbing.ErrReferenceNotFound {
-		return nil
+	if IsRefNotFound(err) {
+		return nil, err
 	}
 	must.NoError(ctx, err)
 	commitObject := GetCommit(ctx, repo, commitHash.Hash())
 
-	return commitObject
+	return commitObject, nil
 }

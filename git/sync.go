@@ -116,6 +116,7 @@ func PushOnce(ctx context.Context, repo *Repository, to URL, refspecs []config.R
 }
 
 // PullOnce implements `git pull` without creating a new remote entry.
+// Panics with authentication required, i/o timeout, repository not found.
 func PullOnce(ctx context.Context, repo *Repository, from URL, refspecs []config.RefSpec) {
 	nonce := nonceName()
 	remote := git.NewRemote(
@@ -131,10 +132,11 @@ func PullOnce(ctx context.Context, repo *Repository, from URL, refspecs []config
 		Auth:       GetAuth(ctx, from),
 		Force:      true,
 	})
-	_, isNoMatchingRefSpec := err.(git.NoMatchingRefSpecError)
+	// panic on authentication required, i/o timeout, repository not found (repo is inaccessible)
+	// ignore empty repo, already up to date, branch not found
 	must.Assertf(ctx,
-		err == transport.ErrEmptyRemoteRepository ||
-			err == git.NoErrAlreadyUpToDate ||
-			isNoMatchingRefSpec ||
-			err == nil, "%v", err)
+		err == nil ||
+			IsRemoteRepoIsEmpty(err) ||
+			IsAlreadyUpToDate(err) ||
+			IsNoMatchingRefSpec(err), "%v", err)
 }
