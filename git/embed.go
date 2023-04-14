@@ -66,7 +66,7 @@ func EmbedOnCommit(
 	remoteTreeHashes := []plumbing.Hash{}
 	remoteCommitHashes := []plumbing.Hash{}
 	for i := range addrs {
-		remoteCommit, err := fetchEmbedding(ctx, repo, addrs[i], caches[i])
+		remoteCommit, err := fetchAttachEmbedding(ctx, repo, addrs[i], caches[i])
 		if err != nil {
 			fmt.Printf("skipping empty or inaccessible repo %v (%v)\n", addrs[i], err)
 			continue
@@ -90,7 +90,20 @@ func EmbedOnCommit(
 	return ch
 }
 
-func fetchEmbedding(ctx context.Context, repo *Repository, addr Address, cache Branch) (*object.Commit, error) {
+// func fetchEmbeddings(ctx context.Context, repo []*Repository, addr []Address, toBranch []Branch) ([]*object.Commit, []error) {
+// 	local := make([]*Repository, len(repo))
+// 	errs := make([]error, len(repo))
+// 	for i := range repo {
+// 		go func(i int) {
+// 			local[i] = openOrInitOnDisk(ctx, XXX, true) // create a throw-away local disk repo
+// 			CloneOneTo(ctx, XXX, XXX)
+// 			// PullOnce(ctx, local[i], addr[i].Repo, clonePullRefSpecs(addr[i], false))
+// 		}(i)
+// 	}
+// 	return XXX, XXX
+// }
+
+func fetchAttachEmbedding(ctx context.Context, repo *Repository, addr Address, cache Branch) (*object.Commit, error) {
 
 	// fetch remote branch using an ephemeral definition of the remote (not stored in the repo)
 	nonce := "embedding-" + strconv.FormatUint(uint64(rand.Int63()), 36)

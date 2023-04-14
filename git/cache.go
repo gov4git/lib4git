@@ -54,28 +54,40 @@ func (x *Cache) urlCachePath(u URL) URL {
 }
 
 func (x *Cache) CloneOne(ctx context.Context, addr Address) Cloned {
-	return x.clone(ctx, addr, false)
+	return x.clone(ctx, addr, x.makeRepo(ctx), false)
+}
+
+func (x *Cache) CloneOneTo(ctx context.Context, addr Address, to *Repository) Cloned {
+	return x.clone(ctx, addr, to, false)
 }
 
 func (x *Cache) CloneAll(ctx context.Context, addr Address) Cloned {
-	return x.clone(ctx, addr, true)
+	return x.clone(ctx, addr, x.makeRepo(ctx), true)
 }
 
-func (x *Cache) clone(ctx context.Context, addr Address, all bool) Cloned {
+func (x *Cache) CloneAllTo(ctx context.Context, addr Address, to *Repository) Cloned {
+	return x.clone(ctx, addr, to, true)
+}
+
+func (x *Cache) makeRepo(ctx context.Context) *Repository {
+	return initInMemory(ctx)
+}
+
+func (x *Cache) clone(ctx context.Context, addr Address, to *Repository, all bool) Cloned {
 
 	// lock access to url cache
 	x.lockURL(addr.Repo)
 	defer x.unlockURL(addr.Repo)
 
 	c := &clonedCacheProxy{
-		all:      all,
-		cache:    x,
-		addr:     addr,
-		diskRepo: openOrInitOnDisk(ctx, x.urlCachePath(addr.Repo), true), // cache must be bare, otherwise checkout branch cannot be pushed
-		memRepo:  initInMemory(ctx),
+		all:       all,
+		cache:     x,
+		addr:      addr,
+		cacheRepo: openOrInitOnDisk(ctx, x.urlCachePath(addr.Repo), true), // cache must be bare, otherwise checkout branch cannot be pushed
+		userRepo:  to,
 	}
 	c.pull(ctx)
-	switchToBranch(ctx, c.memRepo, addr.Branch)
+	switchToBranch(ctx, c.userRepo, addr.Branch)
 	return c
 }
 
@@ -101,19 +113,19 @@ func openOrInitOnDisk(ctx context.Context, path URL, bare bool) *Repository {
 }
 
 type clonedCacheProxy struct {
-	cache    *Cache
-	all      bool
-	addr     Address
-	diskRepo *Repository
-	memRepo  *Repository
+	cache     *Cache
+	all       bool
+	addr      Address
+	cacheRepo *Repository
+	userRepo  *Repository
 }
 
 func (x *clonedCacheProxy) Repo() *Repository {
-	return x.memRepo
+	return x.userRepo
 }
 
 func (x *clonedCacheProxy) Tree() *Tree {
-	t, _ := x.memRepo.Worktree()
+	t, _ := x.userRepo.Worktree()
 	return t
 }
 
@@ -130,8 +142,8 @@ func (x *clonedCacheProxy) Push(ctx context.Context) {
 
 // push pushes all local branches to the remote origin.
 func (x *clonedCacheProxy) push(ctx context.Context) {
-	PushOnce(ctx, x.memRepo, x.cachePath(), mirrorRefSpecs) // push memory to disk
-	PushOnce(ctx, x.diskRepo, x.addr.Repo, mirrorRefSpecs)  // push disk to net
+	PushOnce(ctx, x.userRepo, x.cachePath(), mirrorRefSpecs) // push memory to disk
+	PushOnce(ctx, x.cacheRepo, x.addr.Repo, mirrorRefSpecs)  // push disk to net
 }
 
 func (x *clonedCacheProxy) Pull(ctx context.Context) {
@@ -144,8 +156,8 @@ func (x *clonedCacheProxy) Pull(ctx context.Context) {
 // pull pulls only the branch explicitly named in the clone invocation.
 func (x *clonedCacheProxy) pull(ctx context.Context) {
 	refSpec := clonePullRefSpecs(x.addr, x.all)
-	PullOnce(ctx, x.diskRepo, x.addr.Repo, refSpec)  // pull net into disk
-	PullOnce(ctx, x.memRepo, x.cachePath(), refSpec) // pull disk into memory
+	PullOnce(ctx, x.cacheRepo, x.addr.Repo, refSpec)  // pull net into disk
+	PullOnce(ctx, x.userRepo, x.cachePath(), refSpec) // pull disk into memory
 }
 
 func clonePullRefSpecs(addr Address, all bool) []config.RefSpec {

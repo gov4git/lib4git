@@ -12,8 +12,10 @@ import (
 type Proxy interface {
 	// CloneOne fetches just the branch specified in addr then checks out the branch in addr, creating it if not present.
 	CloneOne(ctx context.Context, addr Address) Cloned
+	CloneOneTo(ctx context.Context, addr Address, to *Repository) Cloned
 	// CloneAll fetches all branches then checks out the branch in addr, creating it if not present.
 	CloneAll(ctx context.Context, addr Address) Cloned
+	CloneAllTo(ctx context.Context, addr Address, to *Repository) Cloned
 }
 
 type Cloned interface {
