@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"strconv"
 
+	"github.com/gammazero/workerpool"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -66,7 +67,7 @@ func EmbedOnCommit(
 	remoteTreeHashes := []plumbing.Hash{}
 	remoteCommitHashes := []plumbing.Hash{}
 	for i := range addrs {
-		remoteCommit, err := fetchAttachEmbedding(ctx, repo, addrs[i], caches[i])
+		remoteCommit, err := FetchIntoBranch(ctx, repo, addrs[i], caches[i])
 		if err != nil {
 			fmt.Printf("skipping empty or inaccessible repo %v (%v)\n", addrs[i], err)
 			continue
@@ -90,25 +91,71 @@ func EmbedOnCommit(
 	return ch
 }
 
-// func fetchEmbeddings(ctx context.Context, repo []*Repository, addr []Address, toBranch []Branch) ([]*object.Commit, []error) {
-// 	local := make([]*Repository, len(repo))
-// 	errs := make([]error, len(repo))
-// 	for i := range repo {
-// 		go func(i int) {
-// 			local[i] = openOrInitOnDisk(ctx, XXX, true) // create a throw-away local disk repo
-// 			CloneOneTo(ctx, XXX, XXX)
-// 			// PullOnce(ctx, local[i], addr[i].Repo, clonePullRefSpecs(addr[i], false))
-// 		}(i)
-// 	}
-// 	return XXX, XXX
-// }
+// fetch all addresses to local disk proxy repos (parallel)
+// fetch proxy repos into target repo (sequential)
+/*
+// repos must be different, because a Repository (a go-git Repository) is not thread-safe.
+func FetchIntoBranches(ctx context.Context, repo []*Repository, addr []Address, toBranch []Branch) []error {
 
-func fetchAttachEmbedding(ctx context.Context, repo *Repository, addr Address, cache Branch) (*object.Commit, error) {
+	// fetch addresses into local disk proxy repos
+	localRepo := make([]*Repository, len(repo))
+	localClone := make([]Cloned, len(repo))
+	errs := make([]error, len(repo))
+	// XXX: throttle
+	for i := range repo {
+		go func(i int) {
+			localPath := filepath.Join(os.TempDir(), nonceName())
+			localRepo[i] = openOrInitOnDisk(ctx, URL(localPath), true) // create a throw-away local disk repo
+			_, err[i] = FetchIntoBranch(ctx, XXX)
+
+			err := must.Try(
+				func() {
+					localClone[i] = CloneOneTo(ctx, addr[i], localRepo[i])
+				},
+			)
+			if IsRepoIsInaccessible(err) {
+				errs[i] = err
+				return
+			}
+			if IsAlreadyUpToDate(err) || IsRemoteRepoIsEmpty(err) {
+				errs[i] = err
+				return
+			}
+			XXX
+			// PullOnce(ctx, local[i], addr[i].Repo, clonePullRefSpecs(addr[i], false))
+		}(i)
+	}
+
+	// commits := make([]*object.Commit, len(repo))
+	// must.NoError(ctx, err)
+	// commits[i], err[i] = LatestCommitOnBranch(ctx, XXX, XXX)
+	// XXX: cleanup local repos
+	return commits, errs
+}
+*/
+
+func FetchIntoBranchPar(ctx context.Context, repo []*Repository, addr []Address, branch []Branch, maxPar int) ([]*object.Commit, []error) {
+	commits := make([]*object.Commit, len(repo))
+	errs := make([]error, len(repo))
+	wp := workerpool.New(maxPar) // throttle
+	for i_ := range repo {
+		i := i_
+		wp.Submit(
+			func() {
+				commits[i], errs[i] = FetchIntoBranch(ctx, repo[i], addr[i], branch[i])
+			},
+		)
+	}
+	wp.StopWait()
+	return commits, errs
+}
+
+func FetchIntoBranch(ctx context.Context, repo *Repository, addr Address, branch Branch) (*object.Commit, error) {
 
 	// fetch remote branch using an ephemeral definition of the remote (not stored in the repo)
 	nonce := "embedding-" + strconv.FormatUint(uint64(rand.Int63()), 36)
 	remoteBranchName := plumbing.NewBranchReferenceName(string(addr.Branch))
-	embeddedBranchName := plumbing.NewBranchReferenceName(string(cache))
+	embeddedBranchName := plumbing.NewBranchReferenceName(string(branch))
 	remote := git.NewRemote(
 		repo.Storer,
 		&config.RemoteConfig{
@@ -131,13 +178,16 @@ func fetchAttachEmbedding(ctx context.Context, repo *Repository, addr Address, c
 	}
 	must.NoError(ctx, err)
 
-	// get the latest commit on remote branch
-	commitHash, err := repo.Reference(embeddedBranchName, true)
+	return LatestCommitOnBranch(ctx, repo, Branch(embeddedBranchName))
+}
+
+// LatestCommitOnBranch returns the latest commit on a branch.
+func LatestCommitOnBranch(ctx context.Context, repo *Repository, branch Branch) (*object.Commit, error) {
+	commitHash, err := repo.Reference(branch.ReferenceName(), true)
 	if IsRefNotFound(err) {
 		return nil, err
 	}
 	must.NoError(ctx, err)
 	commitObject := GetCommit(ctx, repo, commitHash.Hash())
-
 	return commitObject, nil
 }
