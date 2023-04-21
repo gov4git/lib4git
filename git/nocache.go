@@ -3,8 +3,6 @@ package git
 import (
 	"context"
 	"path/filepath"
-
-	"github.com/gov4git/lib4git/base"
 )
 
 type NoCache struct {
@@ -20,23 +18,32 @@ func NewNoCacheOnDisk(dir string) Proxy {
 }
 
 func (x NoCache) CloneOne(ctx context.Context, addr Address) Cloned {
-	return x.clone(ctx, addr, false)
+	return x.clone(ctx, addr, x.makeRepo(ctx), false)
+}
+
+func (x NoCache) CloneOneTo(ctx context.Context, addr Address, to *Repository) Cloned {
+	return x.clone(ctx, addr, to, false)
 }
 
 func (x NoCache) CloneAll(ctx context.Context, addr Address) Cloned {
-	return x.clone(ctx, addr, true)
+	return x.clone(ctx, addr, x.makeRepo(ctx), true)
 }
 
-func (x NoCache) clone(ctx context.Context, addr Address, all bool) Cloned {
-	var repo *Repository
+func (x NoCache) CloneAllTo(ctx context.Context, addr Address, to *Repository) Cloned {
+	return x.clone(ctx, addr, to, true)
+}
+
+func (x NoCache) makeRepo(ctx context.Context) *Repository {
 	if x.dir == "" {
-		repo = initInMemory(ctx)
+		return initInMemory(ctx)
 	} else {
 		p := URL(filepath.Join(x.dir, nonceName()))
-		base.Infof("materializing repo %v on disk %v\n", addr.Repo, p)
-		repo = openOrInitOnDisk(ctx, p, false)
+		return openOrInitOnDisk(ctx, p, false)
 	}
-	c := &clonedNoCache{all: all, addr: addr, repo: repo}
+}
+
+func (x NoCache) clone(ctx context.Context, addr Address, to *Repository, all bool) Cloned {
+	c := &clonedNoCache{all: all, addr: addr, repo: to}
 	c.Pull(ctx)
 	switchToBranch(ctx, c.repo, addr.Branch)
 	return c

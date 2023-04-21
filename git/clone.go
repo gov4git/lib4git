@@ -35,9 +35,23 @@ func CloneOne(ctx context.Context, addr Address) Cloned {
 	return NoCache{}.CloneOne(ctx, addr)
 }
 
+func CloneOneTo(ctx context.Context, addr Address, to *Repository) Cloned {
+	if pxy := getProxy(); pxy != nil {
+		return pxy.CloneOneTo(ctx, addr, to)
+	}
+	return NoCache{}.CloneOneTo(ctx, addr, to)
+}
+
 func CloneAll(ctx context.Context, addr Address) Cloned {
 	if pxy := getProxy(); pxy != nil {
 		return pxy.CloneAll(ctx, addr)
 	}
 	return NoCache{}.CloneAll(ctx, addr)
+}
+
+func CloneAllTo(ctx context.Context, addr Address, to *Repository) Cloned {
+	if pxy := getProxy(); pxy != nil {
+		return pxy.CloneAllTo(ctx, addr, to)
+	}
+	return NoCache{}.CloneAllTo(ctx, addr, to)
 }
