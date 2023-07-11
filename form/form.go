@@ -13,7 +13,7 @@ type Form interface{}
 
 type None struct{}
 
-func Pretty(form Form) string {
+func SprintJSON(form Form) string {
 	data, err := json.MarshalIndent(form, "", "   ")
 	if err != nil {
 		panic(err)
