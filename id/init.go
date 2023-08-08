@@ -3,6 +3,7 @@ package id
 import (
 	"context"
 
+	"github.com/gov4git/lib4git/form"
 	"github.com/gov4git/lib4git/git"
 	"github.com/gov4git/lib4git/must"
 )
@@ -10,7 +11,7 @@ import (
 func Init(
 	ctx context.Context,
 	ownerAddr OwnerAddress,
-) git.Change[PrivateCredentials] {
+) git.Change[form.None, PrivateCredentials] {
 	ownerCloned := CloneOwner(ctx, ownerAddr)
 	privChg := InitLocal(ctx, ownerAddr, ownerCloned)
 
@@ -23,7 +24,7 @@ func InitLocal(
 	ctx context.Context,
 	ownerAddr OwnerAddress,
 	ownerCloned OwnerCloned,
-) git.Change[PrivateCredentials] {
+) git.Change[form.None, PrivateCredentials] {
 
 	privChg := initPrivateStageOnly(ctx, ownerCloned.Private.Tree(), ownerAddr)
 	pubChg := initPublicStageOnly(ctx, ownerCloned.Public.Tree(), privChg.Result.PublicCredentials)
@@ -32,17 +33,20 @@ func InitLocal(
 	return privChg
 }
 
-func initPrivateStageOnly(ctx context.Context, priv *git.Tree, ownerAddr OwnerAddress) git.Change[PrivateCredentials] {
+func initPrivateStageOnly(ctx context.Context, priv *git.Tree, ownerAddr OwnerAddress) git.Change[form.None, PrivateCredentials] {
 	if _, err := priv.Filesystem.Stat(PrivateCredentialsNS.Path()); err == nil {
 		must.Errorf(ctx, "private credentials file already exists")
 	}
 	cred, err := GenerateCredentials()
 	must.NoError(ctx, err)
 	git.ToFileStage(ctx, priv, PrivateCredentialsNS.Path(), cred)
-	return git.Change[PrivateCredentials]{
-		Result: cred,
-		Msg:    "Initialized private credentials.",
-	}
+	return git.NewChange(
+		"Initialized private credentials.",
+		"id_init_private",
+		form.None{},
+		cred,
+		nil,
+	)
 }
 
 func initPublicStageOnly(ctx context.Context, pub *git.Tree, cred PublicCredentials) git.ChangeNoResult {
@@ -50,7 +54,5 @@ func initPublicStageOnly(ctx context.Context, pub *git.Tree, cred PublicCredenti
 		must.Errorf(ctx, "public credentials file already exists")
 	}
 	git.ToFileStage(ctx, pub, PublicCredentialsNS.Path(), cred)
-	return git.ChangeNoResult{
-		Msg: "Initialized public credentials.",
-	}
+	return git.NewChangeNoResult("Initialized public credentials.", "id_init_public")
 }

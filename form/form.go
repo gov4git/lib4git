@@ -11,6 +11,10 @@ import (
 
 type Form interface{}
 
+type Forms []Form
+
+type Map = map[string]Form
+
 type None struct{}
 
 func SprintJSON(form Form) string {
