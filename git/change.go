@@ -10,6 +10,14 @@ type Change[Q any, R any] struct {
 	Steps  form.Forms `json:"steps"`
 }
 
+type Commitable interface {
+	Message() string
+}
+
+func (x Change[Q, R]) Message() string {
+	return x.Msg
+}
+
 func NewChange[Q any, R any](
 	msg string,
 	fn string,
