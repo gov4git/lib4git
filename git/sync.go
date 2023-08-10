@@ -138,5 +138,5 @@ func PullOnce(ctx context.Context, repo *Repository, from URL, refspecs []config
 		err == nil ||
 			IsRemoteRepoIsEmpty(err) ||
 			IsAlreadyUpToDate(err) ||
-			IsNoMatchingRefSpec(err), "%v", err)
+			IsNoMatchingRefSpec(err), "url=%q refspecs=%q err=%v", from, refspecs, err)
 }
