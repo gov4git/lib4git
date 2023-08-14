@@ -40,6 +40,10 @@ type Address struct {
 	Branch Branch
 }
 
+func (a Address) IsEmpty() bool {
+	return a.Repo == "" && a.Branch == ""
+}
+
 func (a Address) Sub(s string) Address {
 	return Address{Repo: a.Repo, Branch: a.Branch.Sub(s)}
 }
