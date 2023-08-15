@@ -13,6 +13,14 @@ type Form interface{}
 
 type Forms []Form
 
+func ToForms[T Form](xs []T) Forms {
+	r := make(Forms, len(xs))
+	for i, x := range xs {
+		r[i] = x
+	}
+	return r
+}
+
 type Map = map[string]Form
 
 type None struct{}
