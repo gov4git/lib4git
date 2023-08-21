@@ -1,6 +1,7 @@
 package git
 
 import (
+	"os"
 	"strings"
 
 	"github.com/go-git/go-git/v5"
@@ -71,4 +72,8 @@ func IsRefNotFound(err error) bool {
 
 func IsRepoIsInaccessible(err error) bool {
 	return IsAuthRequired(err) || IsIOTimeout(err) || IsRepoNotFound(err)
+}
+
+func IsNotExist(err error) bool {
+	return err == os.ErrNotExist
 }
