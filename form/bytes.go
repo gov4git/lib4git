@@ -35,10 +35,14 @@ func DecodeBytesFromString(s string) ([]byte, error) {
 	return base64.StdEncoding.DecodeString(s)
 }
 
-func StringHashForFilename(s string) string {
+func BytesHashForFilename(s []byte) string {
 	h := sha256.New()
-	if _, err := h.Write([]byte(s)); err != nil {
+	if _, err := h.Write(s); err != nil {
 		panic(err)
 	}
 	return strings.ToLower(base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(h.Sum(nil)))
+}
+
+func StringHashForFilename(s string) string {
+	return BytesHashForFilename([]byte(s))
 }
