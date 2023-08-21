@@ -35,9 +35,10 @@ const MainBranch Branch = "main"
 
 const Origin = "origin"
 
+// Address points to a branch in a networked git repo.
 type Address struct {
-	Repo   URL
-	Branch Branch
+	Repo   URL    `json:"git_repo"`
+	Branch Branch `json:"git_branch"`
 }
 
 func (a Address) IsEmpty() bool {
