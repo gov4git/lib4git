@@ -3,6 +3,8 @@ package git
 import (
 	"context"
 	"sync"
+
+	"github.com/gov4git/lib4git/must"
 )
 
 var (
@@ -40,4 +42,8 @@ func CloneAll(ctx context.Context, addr Address) Cloned {
 		return pxy.CloneAll(ctx, addr)
 	}
 	return NoCache{}.CloneAll(ctx, addr)
+}
+
+func TryCloneOne(ctx context.Context, addr Address) (cloned Cloned, err error) {
+	return must.Try1(func() Cloned { return CloneOne(ctx, addr) })
 }
