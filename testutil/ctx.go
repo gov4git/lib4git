@@ -9,8 +9,9 @@ import (
 )
 
 func NewCtx() context.Context {
-	ctxWithAuth := git.WithAuth(context.Background(), nil)
-	return context.WithValue(ctxWithAuth, counterKey{}, &counter{})
+	ctx := git.WithAuth(context.Background(), nil)
+	ctx = git.WithTTL(ctx, nil)
+	return context.WithValue(ctx, counterKey{}, &counter{})
 }
 
 type counterKey struct{}
