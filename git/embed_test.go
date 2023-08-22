@@ -17,7 +17,7 @@ const testEmbedBranch Branch = "brew"
 
 func TestEmbed(t *testing.T) {
 	base.LogVerbosely()
-	ctx := WithAuth(context.Background(), nil)
+	ctx := WithTTL(WithAuth(context.Background(), nil), nil)
 	dir := t.TempDir()
 
 	dir1, dir2, dir3 := filepath.Join(dir, "1"), filepath.Join(dir, "2"), filepath.Join(dir, "3")

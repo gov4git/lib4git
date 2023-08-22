@@ -12,8 +12,9 @@ import (
 	"github.com/gov4git/lib4git/must"
 )
 
-// Replica is an in-memory clone, backed by a local, on-disk copy of a remote repo used for caching
-type Replica struct {
+// replicaClone is an in-memory clone, backed by a local, on-disk copy of a remote repo used for caching.
+// replicaClone are re-entrant across multiple processes, as they use file locks to guarantee correctness.
+type replicaClone struct {
 	cacheDir    string  // replica base directory
 	address     Address // remote address
 	allBranches bool
@@ -22,9 +23,9 @@ type Replica struct {
 	memRepo     *Repository
 }
 
-func NewReplica(ctx context.Context, cacheDir string, address Address, allBranches bool, ttl time.Duration) *Replica {
+func newReplicaClone(ctx context.Context, cacheDir string, address Address, allBranches bool, ttl time.Duration) *replicaClone {
 	must.NoError(ctx, os.MkdirAll(cacheDir, 0755))
-	return &Replica{
+	return &replicaClone{
 		cacheDir:    cacheDir,
 		address:     address,
 		allBranches: allBranches,
@@ -34,15 +35,24 @@ func NewReplica(ctx context.Context, cacheDir string, address Address, allBranch
 	}
 }
 
-func (x *Replica) replicaPathURL() URL {
+func (x *replicaClone) Repo() *Repository {
+	return x.memRepo
+}
+
+func (x *replicaClone) Tree() *Tree {
+	t, _ := x.memRepo.Worktree()
+	return t
+}
+
+func (x *replicaClone) replicaDiskRepoURL() URL {
 	return replicaPathURL(x.cacheDir, x.address)
 }
 
-func (x *Replica) replicaLockPath() string {
+func (x *replicaClone) replicaLockPath() string {
 	return replicaLockPath(x.cacheDir, x.address)
 }
 
-func (x *Replica) replicaTimestampPath() string {
+func (x *replicaClone) replicaTimestampPath() string {
 	return replicaTimestampPath(x.cacheDir, x.address)
 }
 
@@ -63,7 +73,7 @@ func replicaTimestampPath(cacheDir string, addr Address) string {
 
 var ReplicaLockRetryDelay = time.Millisecond * 100
 
-func (x *Replica) Push(ctx context.Context) {
+func (x *replicaClone) Push(ctx context.Context) {
 	// lock on disk cache
 	flk := flock.New(x.replicaLockPath())
 	locked, err := flk.TryLockContext(ctx, ReplicaLockRetryDelay)
@@ -74,13 +84,14 @@ func (x *Replica) Push(ctx context.Context) {
 	x.push(ctx)
 }
 
-func (x *Replica) push(ctx context.Context) {
-	panic("XXX")
-	PushOnce(ctx, x.memRepo, x.replicaPathURL(), mirrorRefSpecs) // push memory to disk
-	PushOnce(ctx, x.diskRepo, x.address.Repo, mirrorRefSpecs)    // push disk to net
+func (x *replicaClone) push(ctx context.Context) {
+	x.invalidateCache(ctx)
+	PushOnce(ctx, x.memRepo, x.replicaDiskRepoURL(), mirrorRefSpecs) // push memory to disk
+	PushOnce(ctx, x.diskRepo, x.address.Repo, mirrorRefSpecs)        // push disk to remote
+	x.validateCache(ctx)
 }
 
-func (x *Replica) Pull(ctx context.Context) {
+func (x *replicaClone) Pull(ctx context.Context) {
 	// lock on disk cache
 	flk := flock.New(x.replicaLockPath())
 	locked, err := flk.TryLockContext(ctx, ReplicaLockRetryDelay)
@@ -91,17 +102,17 @@ func (x *Replica) Pull(ctx context.Context) {
 	x.pull(ctx)
 }
 
-func (x *Replica) pull(ctx context.Context) {
+func (x *replicaClone) pull(ctx context.Context) {
 	if x.isCacheValid(ctx) {
 		return
 	}
 	refSpec := clonePullRefSpecs(x.address, x.allBranches)
 	PullOnce(ctx, x.diskRepo, x.address.Repo, refSpec) // pull remote into disk
 	x.validateCache(ctx)
-	PullOnce(ctx, x.memRepo, x.replicaPathURL(), refSpec) // pull disk into memory
+	PullOnce(ctx, x.memRepo, x.replicaDiskRepoURL(), refSpec) // pull disk into memory
 }
 
-func (x *Replica) isCacheValid(ctx context.Context) bool {
+func (x *replicaClone) isCacheValid(ctx context.Context) bool {
 	fi, err := os.Stat(x.replicaTimestampPath())
 	if errors.Is(err, os.ErrNotExist) {
 		return false
@@ -110,12 +121,12 @@ func (x *Replica) isCacheValid(ctx context.Context) bool {
 	return time.Now().Sub(fi.ModTime()) <= x.ttl
 }
 
-func (x *Replica) validateCache(ctx context.Context) {
+func (x *replicaClone) validateCache(ctx context.Context) {
 	err := os.WriteFile(x.replicaTimestampPath(), []byte(time.Now().String()), 0644)
 	must.NoError(ctx, err)
 }
 
-func (x *Replica) invalidateCache(ctx context.Context) {
+func (x *replicaClone) invalidateCache(ctx context.Context) {
 	err := os.Remove(x.replicaTimestampPath())
 	must.NoError(ctx, err)
 }

@@ -20,7 +20,7 @@ var (
 
 func TestCache(t *testing.T) {
 	base.LogVerbosely()
-	ctx := WithAuth(context.Background(), nil)
+	ctx := WithTTL(WithAuth(context.Background(), nil), nil)
 
 	dir := t.TempDir()
 	fmt.Println("test root ", dir)
