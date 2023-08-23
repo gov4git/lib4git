@@ -40,7 +40,10 @@ func SetAuth(ctx context.Context, forRepo URL, a transport.AuthMethod) {
 }
 
 func GetAuth(ctx context.Context, forRepo URL) transport.AuthMethod {
-	return ctx.Value(contextKeyAuthManager{}).(*AuthManager).GetAuth(forRepo)
+	if am, ok := ctx.Value(contextKeyAuthManager{}).(*AuthManager); ok {
+		return am.GetAuth(forRepo)
+	}
+	return nil
 }
 
 // AuthManager provides authentication methods given a repo URL.
