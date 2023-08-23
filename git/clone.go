@@ -2,46 +2,38 @@ package git
 
 import (
 	"context"
-	"sync"
 
 	"github.com/gov4git/lib4git/must"
 )
 
-var (
-	cacheLk sync.Mutex
-	proxy   Proxy
-)
+type contextKeyGitProxy struct{}
 
-func UseCache(ctx context.Context, dir string) {
-	cacheLk.Lock()
-	defer cacheLk.Unlock()
-	proxy = NewCache(ctx, dir)
+func WithProxy(ctx context.Context, x Proxy) context.Context {
+	return context.WithValue(ctx, contextKeyGitProxy{}, x)
 }
 
-func UseNoCacheOnDisk(ctx context.Context, dir string) {
-	cacheLk.Lock()
-	defer cacheLk.Unlock()
-	proxy = NewNoCacheOnDisk(dir)
+func WithCache(ctx context.Context, dir string) context.Context {
+	return WithProxy(ctx, NewCache(ctx, dir))
 }
 
-func getProxy() Proxy {
-	cacheLk.Lock()
-	defer cacheLk.Unlock()
-	return proxy
+func WithoutCache(ctx context.Context) context.Context {
+	return WithProxy(ctx, NoCache{})
+}
+
+func getProxy(ctx context.Context) Proxy {
+	x, _ := ctx.Value(contextKeyGitProxy{}).(Proxy)
+	if x == nil {
+		x = NoCache{}
+	}
+	return x
 }
 
 func CloneOne(ctx context.Context, addr Address) Cloned {
-	if pxy := getProxy(); pxy != nil {
-		return pxy.CloneOne(ctx, addr)
-	}
-	return NoCache{}.CloneOne(ctx, addr)
+	return getProxy(ctx).CloneOne(ctx, addr)
 }
 
 func CloneAll(ctx context.Context, addr Address) Cloned {
-	if pxy := getProxy(); pxy != nil {
-		return pxy.CloneAll(ctx, addr)
-	}
-	return NoCache{}.CloneAll(ctx, addr)
+	return getProxy(ctx).CloneAll(ctx, addr)
 }
 
 func TryCloneOne(ctx context.Context, addr Address) (cloned Cloned, err error) {
