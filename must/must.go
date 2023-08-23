@@ -24,6 +24,13 @@ func Errorf(ctx context.Context, format string, args ...any) {
 	Panic(ctx, fmt.Errorf(format, args...))
 }
 
+func Assert(ctx context.Context, cond bool, err error) {
+	if cond {
+		return
+	}
+	Panic(ctx, err)
+}
+
 func Assertf(ctx context.Context, cond bool, format string, args ...any) {
 	if cond {
 		return
