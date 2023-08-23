@@ -22,7 +22,10 @@ func SetTTL(ctx context.Context, forRepo URL, a time.Duration) {
 }
 
 func GetTTL(ctx context.Context, forRepo URL) time.Duration {
-	return ctx.Value(contextKeyTTLManager{}).(*TTLManager).GetTTL(forRepo)
+	if tm, ok := ctx.Value(contextKeyTTLManager{}).(*TTLManager); ok {
+		return tm.GetTTL(forRepo)
+	}
+	return 0
 }
 
 // TTLManager provides TTL hints given a repo URL.

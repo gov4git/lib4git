@@ -77,3 +77,7 @@ func IsRepoIsInaccessible(err error) bool {
 func IsNotExist(err error) bool {
 	return err == os.ErrNotExist
 }
+
+func IsNonFastForwardUpdate(err error) bool {
+	return strings.HasPrefix(err.Error(), "non-fast-forward update")
+}
