@@ -42,6 +42,10 @@ func Decode[F Form](ctx context.Context, r io.Reader) (form F, err error) {
 	return form, err
 }
 
+func DecodeInto(ctx context.Context, r io.Reader, into Form) error {
+	return json.NewDecoder(r).Decode(into)
+}
+
 func EncodeBytes[F Form](ctx context.Context, form F) ([]byte, error) {
 	return json.MarshalIndent(form, "", "   ")
 }
@@ -69,6 +73,15 @@ func DecodeFromFile[F Form](ctx context.Context, fs billy.Filesystem, path strin
 	return Decode[F](ctx, file)
 }
 
+func DecodeFromFileInto(ctx context.Context, fs billy.Filesystem, path string, into Form) error {
+	file, err := fs.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	return DecodeInto(ctx, file, into)
+}
+
 func ToFile[F Form](ctx context.Context, fs billy.Filesystem, path string, form F) {
 	if err := EncodeToFile(ctx, fs, path, form); err != nil {
 		must.Panic(ctx, err)
@@ -81,4 +94,8 @@ func FromFile[F Form](ctx context.Context, fs billy.Filesystem, path string) F {
 		must.Panic(ctx, err)
 	}
 	return f
+}
+
+func FromFileInto(ctx context.Context, fs billy.Filesystem, path string, into Form) {
+	must.NoError(ctx, DecodeFromFileInto(ctx, fs, path, into))
 }
