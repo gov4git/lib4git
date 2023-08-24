@@ -18,6 +18,22 @@ func TreeMkdirAll(ctx context.Context, t *Tree, path string) {
 
 //
 
+func BytesToFile(ctx context.Context, t *Tree, path ns.NS, content []byte) {
+	TreeMkdirAll(ctx, t, filepath.Dir(path.Path()))
+	file.BytesToFile(ctx, t.Filesystem, path, content)
+}
+
+func BytesToFileStage(ctx context.Context, t *Tree, path ns.NS, content []byte) {
+	BytesToFile(ctx, t, path, content)
+	Add(ctx, t, path.Path())
+}
+
+func FileToBytes(ctx context.Context, t *Tree, path ns.NS) []byte {
+	return file.FileToBytes(ctx, t.Filesystem, path)
+}
+
+//
+
 func StringToFile(ctx context.Context, t *Tree, path ns.NS, content string) {
 	TreeMkdirAll(ctx, t, filepath.Dir(path.Path()))
 	file.StringToFile(ctx, t.Filesystem, path, content)
