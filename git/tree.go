@@ -64,6 +64,10 @@ func FromFile[V form.Form](ctx context.Context, t *Tree, filePath string) V {
 	return form.FromFile[V](ctx, t.Filesystem, filePath)
 }
 
+func FromFileInto(ctx context.Context, t *Tree, filePath string, into form.Form) {
+	form.FromFileInto(ctx, t.Filesystem, filePath, into)
+}
+
 func TryFromFile[V form.Form](ctx context.Context, t *Tree, filePath string) (v V, err error) {
 	err = must.Try(
 		func() {
