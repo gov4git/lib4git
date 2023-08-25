@@ -55,6 +55,10 @@ func DecodeBytes[F Form](ctx context.Context, data []byte) (form F, err error) {
 	return form, err
 }
 
+func DecodeBytesInto(ctx context.Context, data []byte, into Form) error {
+	return json.Unmarshal(data, into)
+}
+
 func EncodeToFile[F Form](ctx context.Context, fs billy.Filesystem, path string, form F) error {
 	file, err := fs.Create(path)
 	if err != nil {

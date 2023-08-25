@@ -10,6 +10,10 @@ import (
 
 type Bytes []byte
 
+func (x Bytes) Bytes() []byte {
+	return []byte(x)
+}
+
 func (x Bytes) MarshalJSON() ([]byte, error) {
 	return json.Marshal(EncodeBytesToString(x))
 }
