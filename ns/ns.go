@@ -8,6 +8,18 @@ import (
 // NS represents a namespace.
 type NS []string
 
+func Equal(a, b NS) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func ParseFromPath(p string) NS {
 	return strings.Split(filepath.Clean(p), string(filepath.Separator))
 }
