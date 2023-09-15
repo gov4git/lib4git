@@ -25,14 +25,17 @@ func TestEmbed(t *testing.T) {
 	fmt.Println("r2=", dir2)
 	fmt.Println("r3=", dir3)
 
-	r1 := InitPlain(ctx, dir1, false) // non-bare disk repo
-	r2 := InitPlain(ctx, dir2, false)
-	r3 := InitPlain(ctx, dir3, false)
+	InitPlain(ctx, dir1, true) // non-bare disk repo
+	InitPlain(ctx, dir2, true)
+	InitPlain(ctx, dir3, true)
 
 	embed := func() {
-		EmbedOnBranchReset(
+		r := initInMemory(ctx)
+		PullAll(ctx, r, URL(dir1))
+
+		EmbedOnBranch(
 			ctx,
-			r1,
+			r,
 			[]Address{
 				{Repo: URL(dir2), Branch: Branch(testEmbedBranch)},
 				{Repo: URL(dir3), Branch: Branch(testEmbedBranch)},
@@ -46,21 +49,26 @@ func TestEmbed(t *testing.T) {
 			true,
 			MergePassFilter,
 		)
+
+		PushAll(ctx, r, URL(dir1))
 	}
 
-	populate(ctx, r1, "ok1")
-	populate(ctx, r2, "ok2")
-	populate(ctx, r3, "ok3")
-	embed()
-	findFile(ctx, r1, "embedded/r2/ok2")
-	findFile(ctx, r1, "embedded/r3/ok3")
+	populateRemote(ctx, dir1, "ok1")
+	populateRemote(ctx, dir2, "ok2")
+	populateRemote(ctx, dir3, "ok3")
 
-	populate(ctx, r1, "ha1")
-	populate(ctx, r2, "ha2")
-	populate(ctx, r3, "ha3")
 	embed()
-	findFile(ctx, r1, "embedded/r2/ha2")
-	findFile(ctx, r1, "embedded/r3/ha3")
+	// <-(chan int)(nil)
+
+	findFileRemote(ctx, dir1, "embedded/r2/ok2")
+	findFileRemote(ctx, dir1, "embedded/r3/ok3")
+
+	populateRemote(ctx, dir1, "ha1")
+	populateRemote(ctx, dir2, "ha2")
+	populateRemote(ctx, dir3, "ha3")
+	embed()
+	findFileRemote(ctx, dir1, "embedded/r2/ha2")
+	findFileRemote(ctx, dir1, "embedded/r3/ha3")
 
 	// <-(chan int)(nil)
 }
@@ -85,4 +93,21 @@ func populate(ctx context.Context, r *git.Repository, nonce string) {
 	must.NoError(ctx, err)
 	_, err = w.Commit(nonce, &git.CommitOptions{Author: GetAuthor()})
 	must.NoError(ctx, err)
+}
+
+func populateRemote(ctx context.Context, p string, nonce string) {
+	r := initInMemory(ctx)
+	PullAll(ctx, r, URL(p))
+	populate(ctx, r, nonce)
+	PushAll(ctx, r, URL(p))
+}
+
+func findFileRemote(ctx context.Context, p string, filepath string) {
+	r := initInMemory(ctx)
+	PullAll(ctx, r, URL(p))
+	w := Worktree(ctx, r)
+	err := w.Checkout(&git.CheckoutOptions{Branch: plumbing.NewBranchReferenceName(string(testEmbedBranch))})
+	must.NoError(ctx, err)
+
+	findFile(ctx, r, filepath)
 }
