@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/go-git/go-git/v5"
 	"github.com/gofrs/flock"
 	"github.com/gov4git/lib4git/form"
 	"github.com/gov4git/lib4git/must"
@@ -87,7 +88,25 @@ func (x *replicaClone) Push(ctx context.Context) {
 func (x *replicaClone) push(ctx context.Context) {
 	x.invalidateCache(ctx)
 	PushOnce(ctx, x.memRepo, x.replicaDiskRepoURL(), mirrorRefSpecs) // push memory to disk
-	PushOnce(ctx, x.diskRepo, x.address.Repo, mirrorRefSpecs)        // push disk to remote
+
+	// The push operation above changes the on-disk contents of x.diskRepo,
+	// potentially making the in-memory x.diskRepo invalid.
+	// So, we reopen x.diskRepo to make sure its in-memory state is valid with respect to on-disk.
+	//
+	// This code appears to be neccessary when, the native go-git file URL handler is used:
+	//	client.InstallProtocol("file", server.NewClient(server.NewFilesystemLoader(osfs.New(""))))
+	// Without it, an "object not found" error is thrown during the second push (below).
+	//
+	// When instead the default go-git file URL handler is used (which invokes an external git binary):
+	//	client.InstallProtocol("file", file.DefaultClient)
+	// The system works without the code below.
+	//
+	// The discrepancy between the two cases in not currently understood.
+	var err error
+	x.diskRepo, err = git.PlainOpen(string(x.replicaDiskRepoURL()))
+	must.NoError(ctx, err)
+
+	PushOnce(ctx, x.diskRepo, x.address.Repo, mirrorRefSpecs) // push disk to remote
 	x.validateCache(ctx)
 }
 
