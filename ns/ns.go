@@ -24,6 +24,10 @@ func ParseFromPath(p string) NS {
 	return strings.Split(filepath.Clean(p), string(filepath.Separator))
 }
 
+func (ns NS) GitPath() string {
+	return strings.Join(ns, "/")
+}
+
 func (ns NS) Path() string {
 	return filepath.Join(ns...)
 }
