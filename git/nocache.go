@@ -30,11 +30,11 @@ func (x NoCache) CloneAll(ctx context.Context, addr Address) Cloned {
 func (x NoCache) clone(ctx context.Context, addr Address, all bool) Cloned {
 	var repo *Repository
 	if x.dir == "" {
-		repo = initInMemory(ctx)
+		repo = InitInMemory(ctx)
 	} else {
 		p := URL(filepath.Join(x.dir, nonceName()))
 		base.Infof("materializing repo %v on disk %v\n", addr.Repo, p)
-		repo = openOrInitOnDisk(ctx, p, false)
+		repo = OpenOrInitOnDisk(ctx, p, false)
 	}
 	c := &clonedNoCache{all: all, addr: addr, repo: repo}
 	c.Pull(ctx)
