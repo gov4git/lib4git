@@ -30,7 +30,7 @@ func TestEmbed(t *testing.T) {
 	InitPlain(ctx, dir3, true)
 
 	embed := func() {
-		r := initInMemory(ctx)
+		r := InitInMemory(ctx)
 		PullAll(ctx, r, URL(dir1))
 
 		EmbedOnBranch(
@@ -96,14 +96,14 @@ func populate(ctx context.Context, r *git.Repository, nonce string) {
 }
 
 func populateRemote(ctx context.Context, p string, nonce string) {
-	r := initInMemory(ctx)
+	r := InitInMemory(ctx)
 	PullAll(ctx, r, URL(p))
 	populate(ctx, r, nonce)
 	PushAll(ctx, r, URL(p))
 }
 
 func findFileRemote(ctx context.Context, p string, filepath string) {
-	r := initInMemory(ctx)
+	r := InitInMemory(ctx)
 	PullAll(ctx, r, URL(p))
 	w := Worktree(ctx, r)
 	err := w.Checkout(&git.CheckoutOptions{Branch: plumbing.NewBranchReferenceName(string(testEmbedBranch))})

@@ -25,7 +25,7 @@ type Cloned interface {
 	Tree() *Tree
 }
 
-func initInMemory(ctx context.Context) *Repository {
+func InitInMemory(ctx context.Context) *Repository {
 	repo, err := git.Init(memory.NewStorage(), memfs.New())
 	must.NoError(ctx, err)
 	return repo

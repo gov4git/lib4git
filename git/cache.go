@@ -44,7 +44,7 @@ func switchToBranch(ctx context.Context, repo *Repository, branch Branch) {
 	}
 }
 
-func openOrInitOnDisk(ctx context.Context, path URL, bare bool) *Repository {
+func OpenOrInitOnDisk(ctx context.Context, path URL, bare bool) *Repository {
 	repo, err := git.PlainOpen(string(path))
 	if err == nil {
 		return repo

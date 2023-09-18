@@ -31,8 +31,8 @@ func newReplicaClone(ctx context.Context, cacheDir string, address Address, allB
 		address:     address,
 		allBranches: allBranches,
 		ttl:         ttl,
-		diskRepo:    openOrInitOnDisk(ctx, replicaPathURL(cacheDir, address), true), // cache must be bare, otherwise checkout branch cannot be pushed,
-		memRepo:     initInMemory(ctx),
+		diskRepo:    OpenOrInitOnDisk(ctx, replicaPathURL(cacheDir, address), true), // cache must be bare, otherwise checkout branch cannot be pushed,
+		memRepo:     InitInMemory(ctx),
 	}
 }
 
