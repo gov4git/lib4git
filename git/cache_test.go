@@ -1,3 +1,5 @@
+//go:build linux || darwin
+
 package git
 
 import (
@@ -5,9 +7,11 @@ import (
 	"fmt"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/gov4git/lib4git/base"
 	"github.com/gov4git/lib4git/must"
 )
@@ -69,14 +73,8 @@ func populateNonce(ctx context.Context, r *git.Repository, nonce string) {
 	must.NoError(ctx, err)
 	_, err = w.Add(nonce)
 	must.NoError(ctx, err)
-	_, err = w.Commit(nonce, &git.CommitOptions{})
-	must.NoError(ctx, err)
-}
-
-func findFile(ctx context.Context, r *git.Repository, filepath string) {
-	w, err := r.Worktree()
-	must.NoError(ctx, err)
-
-	_, err = w.Filesystem.Stat(filepath)
+	_, err = w.Commit(nonce, &git.CommitOptions{
+		Author: &object.Signature{Name: "test", Email: "test@test", When: time.Now()},
+	})
 	must.NoError(ctx, err)
 }
