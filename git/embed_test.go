@@ -111,3 +111,11 @@ func findFileRemote(ctx context.Context, p string, filepath string) {
 
 	findFile(ctx, r, filepath)
 }
+
+func findFile(ctx context.Context, r *git.Repository, filepath string) {
+	w, err := r.Worktree()
+	must.NoError(ctx, err)
+
+	_, err = w.Filesystem.Stat(filepath)
+	must.NoError(ctx, err)
+}
