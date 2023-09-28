@@ -10,6 +10,7 @@ import (
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/gov4git/lib4git/must"
+	giturls "github.com/whilp/git-urls"
 )
 
 func nonceName() string {
@@ -127,10 +128,20 @@ func PullOnce(ctx context.Context, repo *Repository, from URL, refspecs []config
 			Fetch: refspecs,
 		},
 	)
-	err := remote.FetchContext(ctx, &git.FetchOptions{
+
+	// don't use shallow fetch on file urls (not supported)
+	u, err := giturls.Parse(string(from))
+	must.NoError(ctx, err)
+	depth := 0
+	if u.Scheme != "file" {
+		depth = 1
+	}
+
+	err = remote.FetchContext(ctx, &git.FetchOptions{
 		RemoteName: nonce,
 		Auth:       GetAuth(ctx, from),
 		Force:      true,
+		Depth:      depth,
 	})
 	// panic on authentication required, i/o timeout, repository not found (repo is inaccessible)
 	// ignore empty repo, already up to date, branch not found
