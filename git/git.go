@@ -3,7 +3,7 @@ package git
 import (
 	"context"
 	"fmt"
-	"path/filepath"
+	"strings"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -26,7 +26,7 @@ func (b Branch) ReferenceName() plumbing.ReferenceName {
 }
 
 func (b Branch) Sub(s string) Branch {
-	return Branch(filepath.Join(string(b), s))
+	return Branch(strings.Join([]string{string(b), s}, "/"))
 }
 
 type CommitHash string
@@ -50,7 +50,7 @@ func (a Address) Sub(s string) Address {
 }
 
 func (a Address) Join(s ns.NS) Address {
-	return Address{Repo: a.Repo, Branch: a.Branch.Sub(s.Path())}
+	return Address{Repo: a.Repo, Branch: a.Branch.Sub(s.GitPath())}
 }
 
 func (a Address) String() string {
