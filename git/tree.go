@@ -4,6 +4,7 @@ import (
 	"context"
 	"io/fs"
 
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/format/index"
 	"github.com/gov4git/lib4git/file"
 	"github.com/gov4git/lib4git/form"
@@ -21,6 +22,14 @@ func TreeMkdirAll(ctx context.Context, t *Tree, path ns.NS) {
 
 func TreeStat(ctx context.Context, t *Tree, path ns.NS) (fs.FileInfo, error) {
 	return t.Filesystem.Stat(path.GitPath())
+}
+
+func TreeRemove(ctx context.Context, t *Tree, path ns.NS) (plumbing.Hash, error) {
+	return t.Remove(path.GitPath())
+}
+
+func TreeReadDir(ctx context.Context, t *Tree, path ns.NS) ([]fs.FileInfo, error) {
+	return t.Filesystem.ReadDir(path.GitPath())
 }
 
 //
