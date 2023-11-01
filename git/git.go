@@ -110,8 +110,8 @@ func Worktree(ctx context.Context, repo *Repository) *Tree {
 	return wt
 }
 
-func Add(ctx context.Context, wt *Tree, path string) {
-	if _, err := wt.Add(path); err != nil {
+func Add(ctx context.Context, wt *Tree, path ns.NS) {
+	if _, err := wt.Add(path.GitPath()); err != nil {
 		must.Panic(ctx, err)
 	}
 }

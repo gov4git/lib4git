@@ -65,3 +65,14 @@ func (ns NS) Join(sub NS) NS {
 func (ns NS) Parts() []string {
 	return ns
 }
+
+func (ns NS) Dir() NS {
+	if len(ns) == 0 {
+		return NS{}
+	}
+	return ns[:len(ns)-1]
+}
+
+func (ns NS) Len() int {
+	return len(ns)
+}
