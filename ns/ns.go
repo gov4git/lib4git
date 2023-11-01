@@ -2,6 +2,7 @@ package ns
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -46,13 +47,14 @@ func (ns NS) Ext(ext string) NS {
 	return xs
 }
 
-func (ns NS) Sub(path string) NS {
-	sub := make(NS, len(ns)+1)
-	for i := range ns {
-		sub[i] = ns[i]
-	}
-	sub[len(ns)] = path
-	return sub
+// Deprecated: Use Append.
+func (ns NS) Sub(pathElem string) NS {
+	return ns.Append(pathElem)
+}
+
+func (ns NS) Append(elems ...string) NS {
+	r := slices.Clone(ns)
+	return append(r, elems...)
 }
 
 func (ns NS) Join(sub NS) NS {
