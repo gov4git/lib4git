@@ -1,23 +1,26 @@
 package git
 
-import "path/filepath"
+import (
+	"github.com/gov4git/lib4git/ns"
+)
 
-func ListFilesRecursively(t *Tree, dir string) ([]string, error) {
+func ListFilesRecursively(t *Tree, dir ns.NS) ([]ns.NS, error) {
 	fs := t.Filesystem
-	infos, err := fs.ReadDir(dir)
+	infos, err := fs.ReadDir(dir.GitPath())
 	if err != nil {
 		return nil, err
 	}
-	list := []string{}
+	list := []ns.NS{}
 	for _, info := range infos {
+		childPath := dir.Append(info.Name())
 		if info.IsDir() {
-			sublist, err := ListFilesRecursively(t, filepath.Join(dir, info.Name()))
+			sublist, err := ListFilesRecursively(t, childPath)
 			if err != nil {
 				return nil, err
 			}
 			list = append(list, sublist...)
 		} else {
-			list = append(list, filepath.Join(dir, info.Name()))
+			list = append(list, childPath)
 		}
 	}
 	return list, nil

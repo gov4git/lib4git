@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/gov4git/lib4git/must"
+	"github.com/gov4git/lib4git/ns"
 )
 
 type Form interface{}
@@ -59,8 +60,8 @@ func DecodeBytesInto(ctx context.Context, data []byte, into Form) error {
 	return json.Unmarshal(data, into)
 }
 
-func EncodeToFile[F Form](ctx context.Context, fs billy.Filesystem, path string, form F) error {
-	file, err := fs.Create(path)
+func EncodeToFile[F Form](ctx context.Context, fs billy.Filesystem, path ns.NS, form F) error {
+	file, err := fs.Create(path.GitPath())
 	if err != nil {
 		return err
 	}
@@ -68,8 +69,8 @@ func EncodeToFile[F Form](ctx context.Context, fs billy.Filesystem, path string,
 	return Encode(ctx, file, form)
 }
 
-func DecodeFromFile[F Form](ctx context.Context, fs billy.Filesystem, path string) (form F, err error) {
-	file, err := fs.Open(path)
+func DecodeFromFile[F Form](ctx context.Context, fs billy.Filesystem, path ns.NS) (form F, err error) {
+	file, err := fs.Open(path.GitPath())
 	if err != nil {
 		return form, err
 	}
@@ -77,8 +78,8 @@ func DecodeFromFile[F Form](ctx context.Context, fs billy.Filesystem, path strin
 	return Decode[F](ctx, file)
 }
 
-func DecodeFromFileInto(ctx context.Context, fs billy.Filesystem, path string, into Form) error {
-	file, err := fs.Open(path)
+func DecodeFromFileInto(ctx context.Context, fs billy.Filesystem, path ns.NS, into Form) error {
+	file, err := fs.Open(path.GitPath())
 	if err != nil {
 		return err
 	}
@@ -86,13 +87,13 @@ func DecodeFromFileInto(ctx context.Context, fs billy.Filesystem, path string, i
 	return DecodeInto(ctx, file, into)
 }
 
-func ToFile[F Form](ctx context.Context, fs billy.Filesystem, path string, form F) {
+func ToFile[F Form](ctx context.Context, fs billy.Filesystem, path ns.NS, form F) {
 	if err := EncodeToFile(ctx, fs, path, form); err != nil {
 		must.Panic(ctx, err)
 	}
 }
 
-func FromFile[F Form](ctx context.Context, fs billy.Filesystem, path string) F {
+func FromFile[F Form](ctx context.Context, fs billy.Filesystem, path ns.NS) F {
 	f, err := DecodeFromFile[F](ctx, fs, path)
 	if err != nil {
 		must.Panic(ctx, err)
@@ -100,6 +101,6 @@ func FromFile[F Form](ctx context.Context, fs billy.Filesystem, path string) F {
 	return f
 }
 
-func FromFileInto(ctx context.Context, fs billy.Filesystem, path string, into Form) {
+func FromFileInto(ctx context.Context, fs billy.Filesystem, path ns.NS, into Form) {
 	must.NoError(ctx, DecodeFromFileInto(ctx, fs, path, into))
 }

@@ -2,6 +2,7 @@ package ns
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -20,15 +21,19 @@ func Equal(a, b NS) bool {
 	return true
 }
 
-func ParseFromPath(p string) NS {
-	return strings.Split(filepath.Clean(p), string(filepath.Separator))
+func ParseFromOSPath(p string) NS {
+	return strings.Split(filepath.ToSlash(filepath.Clean(p)), "/")
+}
+
+func ParseFromGitPath(p string) NS {
+	return strings.Split(p, "/")
 }
 
 func (ns NS) GitPath() string {
 	return strings.Join(ns, "/")
 }
 
-func (ns NS) Path() string {
+func (ns NS) OSPath() string {
 	return filepath.Join(ns...)
 }
 
@@ -42,13 +47,14 @@ func (ns NS) Ext(ext string) NS {
 	return xs
 }
 
-func (ns NS) Sub(path string) NS {
-	sub := make(NS, len(ns)+1)
-	for i := range ns {
-		sub[i] = ns[i]
-	}
-	sub[len(ns)] = path
-	return sub
+// Deprecated: Use Append.
+func (ns NS) Sub(pathElem string) NS {
+	return ns.Append(pathElem)
+}
+
+func (ns NS) Append(elems ...string) NS {
+	r := slices.Clone(ns)
+	return append(r, elems...)
 }
 
 func (ns NS) Join(sub NS) NS {
@@ -60,4 +66,22 @@ func (ns NS) Join(sub NS) NS {
 
 func (ns NS) Parts() []string {
 	return ns
+}
+
+func (ns NS) Base() string {
+	if len(ns) == 0 {
+		return ""
+	}
+	return ns[len(ns)-1]
+}
+
+func (ns NS) Dir() NS {
+	if len(ns) == 0 {
+		return NS{}
+	}
+	return ns[:len(ns)-1]
+}
+
+func (ns NS) Len() int {
+	return len(ns)
 }
