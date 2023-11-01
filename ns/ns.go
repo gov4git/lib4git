@@ -20,15 +20,19 @@ func Equal(a, b NS) bool {
 	return true
 }
 
-func ParseFromPath(p string) NS {
-	return strings.Split(filepath.Clean(p), string(filepath.Separator))
+func ParseFromOSPath(p string) NS {
+	return strings.Split(filepath.ToSlash(filepath.Clean(p)), "/")
+}
+
+func ParseFromGitPath(p string) NS {
+	return strings.Split(p, "/")
 }
 
 func (ns NS) GitPath() string {
 	return strings.Join(ns, "/")
 }
 
-func (ns NS) Path() string {
+func (ns NS) OSPath() string {
 	return filepath.Join(ns...)
 }
 

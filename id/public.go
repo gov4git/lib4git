@@ -12,5 +12,5 @@ func FetchPublicCredentials(ctx context.Context, addr PublicAddress) PublicCrede
 }
 
 func GetPublicCredentials(ctx context.Context, t *git.Tree) PublicCredentials {
-	return form.FromFile[PublicCredentials](ctx, t.Filesystem, PublicCredentialsNS.Path())
+	return form.FromFile[PublicCredentials](ctx, t.Filesystem, PublicCredentialsNS.OSPath())
 }

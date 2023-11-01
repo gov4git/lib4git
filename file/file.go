@@ -2,7 +2,7 @@ package file
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"os"
 
 	"github.com/go-git/go-billy/v5"
@@ -19,7 +19,7 @@ func FileToString(ctx context.Context, fs billy.Filesystem, path ns.NS) string {
 }
 
 func BytesToFile(ctx context.Context, fs billy.Filesystem, path ns.NS, content []byte) {
-	file, err := fs.OpenFile(path.Path(), os.O_CREATE|os.O_RDWR, 0644)
+	file, err := fs.OpenFile(path.GitPath(), os.O_CREATE|os.O_RDWR, 0644)
 	must.NoError(ctx, err)
 	defer file.Close()
 	_, err = file.Write(content)
@@ -27,9 +27,9 @@ func BytesToFile(ctx context.Context, fs billy.Filesystem, path ns.NS, content [
 }
 
 func FileToBytes(ctx context.Context, fs billy.Filesystem, path ns.NS) []byte {
-	file, err := fs.Open(path.Path())
+	file, err := fs.Open(path.GitPath())
 	must.NoError(ctx, err)
-	content, err := ioutil.ReadAll(file)
+	content, err := io.ReadAll(file)
 	must.NoError(ctx, err)
 	return content
 }

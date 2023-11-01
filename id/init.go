@@ -34,12 +34,12 @@ func InitLocal(
 }
 
 func initPrivateStageOnly(ctx context.Context, priv *git.Tree, ownerAddr OwnerAddress) git.Change[form.None, PrivateCredentials] {
-	if _, err := priv.Filesystem.Stat(PrivateCredentialsNS.Path()); err == nil {
+	if _, err := priv.Filesystem.Stat(PrivateCredentialsNS.OSPath()); err == nil {
 		must.Errorf(ctx, "private credentials file already exists")
 	}
 	cred, err := GenerateCredentials()
 	must.NoError(ctx, err)
-	git.ToFileStage(ctx, priv, PrivateCredentialsNS.Path(), cred)
+	git.ToFileStage(ctx, priv, PrivateCredentialsNS.OSPath(), cred)
 	return git.NewChange(
 		"Initialized private credentials.",
 		"id_init_private",
@@ -50,9 +50,9 @@ func initPrivateStageOnly(ctx context.Context, priv *git.Tree, ownerAddr OwnerAd
 }
 
 func initPublicStageOnly(ctx context.Context, pub *git.Tree, cred PublicCredentials) git.ChangeNoResult {
-	if _, err := pub.Filesystem.Stat(PublicCredentialsNS.Path()); err == nil {
+	if _, err := pub.Filesystem.Stat(PublicCredentialsNS.OSPath()); err == nil {
 		must.Errorf(ctx, "public credentials file already exists")
 	}
-	git.ToFileStage(ctx, pub, PublicCredentialsNS.Path(), cred)
+	git.ToFileStage(ctx, pub, PublicCredentialsNS.OSPath(), cred)
 	return git.NewChangeNoResult("Initialized public credentials.", "id_init_public")
 }
