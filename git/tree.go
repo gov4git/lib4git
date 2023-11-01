@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"io/fs"
 
 	"github.com/go-git/go-git/v5/plumbing/format/index"
 	"github.com/gov4git/lib4git/file"
@@ -16,6 +17,10 @@ func TreeMkdirAll(ctx context.Context, t *Tree, path ns.NS) {
 	}
 	err := t.Filesystem.MkdirAll(path.GitPath(), 0755)
 	must.NoError(ctx, err)
+}
+
+func TreeStat(ctx context.Context, t *Tree, path ns.NS) (fs.FileInfo, error) {
+	return t.Filesystem.Stat(path.GitPath())
 }
 
 //
