@@ -7,13 +7,24 @@ import (
 )
 
 type Error struct {
-	Ctx   context.Context
-	Stack []byte
-	error
+	Ctx     context.Context
+	Stack   []byte
+	wrapped error
 }
 
-func mkErr(ctx context.Context, err error) Error {
-	return Error{Ctx: ctx, Stack: debug.Stack(), error: err}
+func (x *Error) Error() string {
+	return x.Wrapped().Error()
+}
+
+func (x *Error) Wrapped() error {
+	if x == nil {
+		return nil
+	}
+	return x.wrapped
+}
+
+func mkErr(ctx context.Context, wrapped error) *Error {
+	return &Error{Ctx: ctx, Stack: debug.Stack(), wrapped: wrapped}
 }
 
 func Panic(ctx context.Context, err error) {
@@ -47,7 +58,17 @@ func NoError(ctx context.Context, err error) {
 func Try(f func()) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = r.(Error).error
+			err = r.(*Error).Wrapped()
+		}
+	}()
+	f()
+	return nil
+}
+
+func TryThru(f func()) (err *Error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = r.(*Error)
 		}
 	}()
 	f()
@@ -57,8 +78,8 @@ func Try(f func()) (err error) {
 func TryWithStack(f func()) (err error, stack []byte) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = r.(Error).error
-			stack = r.(Error).Stack
+			err = r.(*Error).Wrapped()
+			stack = r.(*Error).Stack
 		}
 	}()
 	f()
@@ -68,7 +89,16 @@ func TryWithStack(f func()) (err error, stack []byte) {
 func Try1[R1 any](f func() R1) (_ R1, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = r.(Error).error
+			err = r.(*Error).Wrapped()
+		}
+	}()
+	return f(), nil
+}
+
+func Try1Thru[R1 any](f func() R1) (_ R1, err *Error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = r.(*Error)
 		}
 	}()
 	return f(), nil
