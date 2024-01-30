@@ -23,8 +23,20 @@ func (x *Error) Wrapped() error {
 	return x.wrapped
 }
 
+type ErrorString struct {
+	Msg string `json:"msg"`
+}
+
+func (x ErrorString) Error() string {
+	return x.Msg
+}
+
 func mkErr(ctx context.Context, wrapped error) *Error {
-	return &Error{Ctx: ctx, Stack: debug.Stack(), wrapped: wrapped}
+	return &Error{
+		Ctx:     ctx,
+		Stack:   debug.Stack(),
+		wrapped: wrapped,
+	}
 }
 
 func Panic(ctx context.Context, err error) {
@@ -32,7 +44,7 @@ func Panic(ctx context.Context, err error) {
 }
 
 func Errorf(ctx context.Context, format string, args ...any) {
-	Panic(ctx, fmt.Errorf(format, args...))
+	Panic(ctx, ErrorString{Msg: fmt.Sprintf(format, args...)})
 }
 
 func Assert(ctx context.Context, cond bool, err error) {
