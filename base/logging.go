@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"time"
 
-	"go.uber.org/zap"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
-var logger *zap.Logger
 var verbose bool
 
 func init() {
@@ -19,31 +20,29 @@ func IsVerbose() bool {
 	return verbose
 }
 
-func newQuietConfig() zap.Config {
-	cfg := zap.NewProductionConfig()
-	cfg.Encoding = "console"
-	// cfg.DisableStacktrace = true
-	cfg.Level = zap.NewAtomicLevelAt(zap.WarnLevel)
-	return cfg
-}
-
 func LogQuietly() {
-	l, err := newQuietConfig().Build()
-	if err != nil {
-		println("cannot create logger:", err)
-		os.Exit(1)
-	}
-	logger = l
+	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	log.Logger = log.Output(
+		zerolog.ConsoleWriter{
+			Out:        os.Stderr,
+			NoColor:    true,
+			TimeFormat: time.RFC3339,
+		},
+	)
 	verbose = false
 }
 
 func LogVerbosely() {
-	l, err := zap.NewDevelopmentConfig().Build()
-	if err != nil {
-		println("cannot create logger:", err)
-		os.Exit(1)
-	}
-	logger = l
+	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	log.Logger = log.Output(
+		zerolog.ConsoleWriter{
+			Out:        os.Stderr,
+			NoColor:    true,
+			TimeFormat: time.RFC3339,
+		},
+	)
 	verbose = true
 }
 
@@ -54,29 +53,34 @@ func AssertNoErr(err error) {
 	Fatalf("encountered %v", err)
 }
 
+func Debugf(template string, args ...interface{}) {
+	_, file, line, _ := runtime.Caller(1)
+	src := fmt.Sprintf("%s:%d ", file, line)
+	msg := fmt.Sprintf(template, args...)
+	log.Debug().Msg(src + msg)
+}
+
 func Infof(template string, args ...interface{}) {
 	_, file, line, _ := runtime.Caller(1)
 	src := fmt.Sprintf("%s:%d ", file, line)
 	msg := fmt.Sprintf(template, args...)
-	logger.Sugar().Info(src + msg)
+	log.Info().Msg(src + msg)
 }
 
 func Fatalf(template string, args ...interface{}) {
 	_, file, line, _ := runtime.Caller(1)
 	src := fmt.Sprintf("%s:%d ", file, line)
 	msg := fmt.Sprintf(template, args...)
-	logger.Sugar().Fatal(src + msg)
-	// logger.Sugar().Fatalf(template, args...)
+	log.Fatal().Msg(src + msg)
 }
 
 func Errorf(template string, args ...interface{}) {
 	_, file, line, _ := runtime.Caller(1)
 	src := fmt.Sprintf("%s:%d ", file, line)
 	msg := fmt.Sprintf(template, args...)
-	logger.Sugar().Error(src + msg)
-	// logger.Sugar().Errorf(template, args...)
+	log.Error().Msg(src + msg)
 }
 
 func Sync() error {
-	return logger.Sync()
+	return nil
 }

@@ -2,6 +2,7 @@ package base
 
 import "testing"
 
-func TestLogging(t *testing.T) {
-	logger.Sugar().Infof("abc %d", 3)
+func TestLogger(t *testing.T) {
+	LogVerbosely()
+	Debugf("xxx")
 }
