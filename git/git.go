@@ -111,6 +111,9 @@ func Worktree(ctx context.Context, repo *Repository) *Tree {
 }
 
 func Add(ctx context.Context, wt *Tree, path ns.NS) {
+	if IsStagingMuted(ctx) {
+		return
+	}
 	if _, err := wt.Add(path.GitPath()); err != nil {
 		must.Panic(ctx, err)
 	}
