@@ -114,14 +114,25 @@ func Add(ctx context.Context, wt *Tree, path ns.NS) {
 	if IsStagingMuted(ctx) {
 		return
 	}
-	if _, err := wt.Add(path.GitPath()); err != nil {
-		must.Panic(ctx, err)
-	}
+	addOpts := &git.AddOptions{All: false, Path: path.GitPath(), SkipStatus: true}
+	must.NoError(ctx, wt.AddWithOptions(addOpts))
 }
 
 func Commit(ctx context.Context, wt *Tree, msg string) {
-	if _, err := wt.Commit(msg, &git.CommitOptions{Author: GetAuthor()}); err != nil {
-		must.Panic(ctx, err)
+	_, err := wt.Commit(msg, &git.CommitOptions{Author: GetAuthor()})
+	must.NoError(ctx, err)
+}
+
+func CommitAll(ctx context.Context, wt *Tree, msg string) {
+	TreeStageAll(ctx, wt)
+	Commit(ctx, wt, msg)
+}
+
+func CommitAllIfChanged(ctx context.Context, wt *Tree, msg string) {
+	status, err := wt.Status()
+	must.NoError(ctx, err)
+	if !status.IsClean() {
+		CommitAll(ctx, wt, msg)
 	}
 }
 
